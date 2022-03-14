@@ -52,7 +52,7 @@ class AuthController extends Controller
 
         ]);
 
-        $token = $user->createToken('socialtoken')->plainTextToken;
+        $token = $user->createToken('myLaravelSandboxToken')->plainTextToken;
 
         $response = [
             'user' => $user,
@@ -60,6 +60,43 @@ class AuthController extends Controller
         ];
 
         return response($response, 201);
+    }
+
+    public function login(Request $request){
+        //validate fields
+        $fields = $request->validate([
+            'email' => 'required|string',
+            'password' => 'required|string'
+        ]);
+
+        //check email data
+        $user = User::where('email', $fields['email'])->first();
+
+        if(!$user || !Hash::check($fields['password'], $user->password)){
+            return response([
+                'message' => 'invalid credentials',
+            ], 401);
+        }
+
+        //generate auth token
+        $token = $user->createToken('myLaravelSandboxToken')->plainTextToken;
+
+        $response = [
+            'user' => $user,
+            'token' => $token,
+        ];
+
+        return response($response, 201);
+    }
+
+    public function logout(Request $request){
+        auth()->user()->tokens()->delete();
+        
+        $response = [
+            'message' => 'logout successful',
+        ];
+
+        return response($response, 200);
     }
 
     

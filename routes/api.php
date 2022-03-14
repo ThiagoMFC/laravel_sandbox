@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\RandomController;
 
 
 /*
@@ -18,24 +19,32 @@ use App\Http\Controllers\AuthController;
 
 //public routes
 
-Route::get('/test', function(){
+/*Route::get('/test', function(){
     return 'works';
-});
-
-/*Route::post('/multiply', function(Request $request){
-    return $request['a']*$request['b'];
-});
-
-Route::post('/divide', function(Request $request){
-    return $request['a']/$request['b'];
-});
-
-Route::post('/add', function(Request $request){
-    return $request['a'] + $request['b'];
 });*/
 
 Route::post('/register', [AuthController::class, 'register']);
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::post('/login', [AuthController::class, 'login']);
+
+
+//random controller -> random stuff just for fun
+
+Route::get('/test', [RandomController::class, 'test']);
+
+Route::post('/random', [RandomController::class, 'switchcase']);
+
+// end of random stuff
+
+
+//protected routes
+
+Route::group(['middleware' => ['auth:sanctum']], function(){
+
+    Route::post('logout', [AuthController::class, 'logout']);
+    
 });
+
+/*Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
+});*/
