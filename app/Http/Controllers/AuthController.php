@@ -40,6 +40,8 @@ class AuthController extends Controller
 
         $username = $this->checkUniqueUsername($fields['first_name'] . "_" . $fields['last_name']);
 
+        $token = $user->createToken('myLaravelSandboxToken')->plainTextToken;
+
         $user = User::create([
             'first_name' => $fields['first_name'],
             'last_name' => $fields['last_name'],
@@ -49,10 +51,9 @@ class AuthController extends Controller
             'last_login' => $time_now,
             'created_at' => $time_now,
             'status' => 'active',
+            'remember_token' => $token,
 
         ]);
-
-        $token = $user->createToken('myLaravelSandboxToken')->plainTextToken;
 
         $response = [
             'user' => $user,
@@ -81,10 +82,16 @@ class AuthController extends Controller
         //generate auth token
         $token = $user->createToken('myLaravelSandboxToken')->plainTextToken;
 
+        $time_now = Carbon::now();
+
+
         $response = [
             'user' => $user,
             'token' => $token,
         ];
+
+        //update user info
+        $user = User::where('id', $user['id'])->update(['remember_token'=>$token, 'last_login'=>$time_now]);
 
         return response($response, 201);
     }

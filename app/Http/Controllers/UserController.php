@@ -16,9 +16,19 @@ class UserController extends Controller
     }
 
     //follow user
-    public function follow($follower, $following){
+    public function follow($follower, $following, Request $request){
 
-        //check if already following***
+        //check if already following*** INDIVIDUAL AUTHENTICATION
+        $token = $request->bearerToken();
+
+        $user = User::where('id', '=', $follower)->where('remember_token', '=', $token)->get();
+
+        if($user->isEmpty()){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
 
         $time_now = Carbon::now();
 
