@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RandomController;
+use App\Http\Controllers\UserController;
 
 
 /*
@@ -27,6 +28,8 @@ Route::post('/register', [AuthController::class, 'register']);
 
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::get('/users/search/{name}', [UserController::class, 'search']);
+
 
 //random controller -> random stuff just for fun
 
@@ -41,8 +44,10 @@ Route::post('/random', [RandomController::class, 'switchcase']);
 
 Route::group(['middleware' => ['auth:sanctum']], function(){
 
-    Route::post('logout', [AuthController::class, 'logout']);
-    
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::post('/follow/{follower_id}/{following_id}', [UserController::class, 'follow']);
+
 });
 
 /*Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
