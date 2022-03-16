@@ -52,6 +52,28 @@ class UserController extends Controller
 
     //unfollow user
 
+    public function unfollow($follower, $following, Request $request){
+
+        $token = $request->bearerToken(); //get bearer token
+
+        $userTokenMatchId = User::where('id', '=', $follower)->where('remember_token', '=', $token)->get(); //check if id and token match records
+
+        if($userTokenMatchId->isEmpty()){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $time_now = Carbon::now();
+
+        $userFollow = UserFollow::where('follower_id', '=', $follower)->where('following_id', '=', $following)->update(['status' => 'inactive', 'unfollow_date' => $time_now]);
+
+        return response([
+            'message' => 'unfollowed',
+        ], 200);
+
+    }
+
     //user profile
 
     //user main page/feed

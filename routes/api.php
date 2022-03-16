@@ -48,6 +48,8 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
 
     Route::post('/follow/{follower_id}/{following_id}', [UserController::class, 'follow']);
 
+    Route::post('/unfollow/{follower_id}/{following_id}', [UserController::class, 'unfollow']);
+
 });
 
 /*Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
