@@ -7,10 +7,11 @@ use Illuminate\Http\Response;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
+use App\Lib\HelperClass;
 
 class AuthController extends Controller
 {
-    function checkUniqueUsername($name){
+    /*function checkUniqueUsername($name){
         $i = 0;
         $username = str_replace(" ", "_", $name);
         $usernameUnique = $username . "_" . strval($i);
@@ -26,7 +27,7 @@ class AuthController extends Controller
         }
         
         return $usernameUnique;
-    }
+    }*/
 
     public function register(Request $request){
         $fields = $request->validate([
@@ -38,10 +39,10 @@ class AuthController extends Controller
 
         $time_now = Carbon::now();
 
-        $username = $this->checkUniqueUsername($fields['first_name'] . "_" . $fields['last_name']);
-
-        $token = $user->createToken('myLaravelSandboxToken')->plainTextToken;
-
+        //$username = $this->checkUniqueUsername($fields['first_name'] . "_" . $fields['last_name']);
+        $helper = new HelperClass();
+        $username = $helper->checkUniqueUsername($fields['first_name'] . "_" . $fields['last_name']);
+        
         $user = User::create([
             'first_name' => $fields['first_name'],
             'last_name' => $fields['last_name'],
@@ -51,14 +52,20 @@ class AuthController extends Controller
             'last_login' => $time_now,
             'created_at' => $time_now,
             'status' => 'active',
-            'remember_token' => $token,
 
         ]);
+
+        $token = $user->createToken('myLaravelSandboxToken')->plainTextToken;
 
         $response = [
             'user' => $user,
             'token' => $token
         ];
+
+        /*
+            gonna use sanctum token as extra layer of user validation. 1 to 10 how bad is it?
+        */
+        $user = User::where('username', $username)->update(['remember_token'=>$token]);
 
         return response($response, 201);
     }

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\UserFollow;
 use Carbon\Carbon;
+use App\Lib\HelperClass;
 
 class UserController extends Controller
 {
@@ -20,9 +21,11 @@ class UserController extends Controller
 
         $token = $request->bearerToken(); //get bearer token
 
-        $userTokenMatchId = User::where('id', '=', $follower)->where('remember_token', '=', $token)->get(); //check if id and token match records
+        //remember when I said I was gonna use sanctum token as an extra layer of user validation? here it is lol. feels so wrong for whatever reason.
+        $helper = new HelperClass();
+        $userTokenMatchId =  $helper->checkToken($follower, $token);
 
-        if($userTokenMatchId->isEmpty()){
+        if(!$userTokenMatchId){
             return response([
                 'message' => 'invalid request, user invalid',
             ], 401);
@@ -56,14 +59,14 @@ class UserController extends Controller
 
         $token = $request->bearerToken(); //get bearer token
 
-        $userTokenMatchId = User::where('id', '=', $follower)->where('remember_token', '=', $token)->get(); //check if id and token match records
+        $helper = new HelperClass();
+        $userTokenMatchId =  $helper->checkToken($follower, $token);
 
-        if($userTokenMatchId->isEmpty()){
+        if(!$userTokenMatchId){
             return response([
                 'message' => 'invalid request, user invalid',
             ], 401);
         }
-
         $time_now = Carbon::now();
 
         $userFollow = UserFollow::where('follower_id', '=', $follower)->where('following_id', '=', $following)->update(['status' => 'inactive', 'unfollow_date' => $time_now]);
