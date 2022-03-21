@@ -10,6 +10,8 @@ class HelperClass{
         $username = str_replace(" ", "_", $name);
         $usernameUnique = $username . "_" . strval($i);
 
+
+        //I'm aware this is unbelievably inneficient and would never fly in Prod. Did it just because...
         for ( ; ; ){
             $user = User::where('username', $usernameUnique)->first();
             if(!$user){

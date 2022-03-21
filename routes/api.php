@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RandomController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PostController;
 
 
 /*
@@ -49,6 +50,8 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
     Route::post('/follow/{follower_id}/{following_id}', [UserController::class, 'follow']);
 
     Route::post('/unfollow/{follower_id}/{following_id}', [UserController::class, 'unfollow']);
+
+    Route::post('/post', [PostController::class, 'store']);
 
 });
 
