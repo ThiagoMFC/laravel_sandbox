@@ -84,14 +84,35 @@ class PostController extends Controller
                 'message' => 'update failed',
             ], 500);
         }
-
-
-        
     }
 
 
-    public function destroy($id)
+    public function destroy($id, Request $request)
     {
-        //
+        $fields = $request->validate([
+            'author_id' => 'required|string',
+        ]);
+
+        $token = $request->bearerToken();
+        $helper = new HelperClass();
+        $userTokenMatchId =  $helper->checkToken($fields['author_id'], $token);
+
+        if(!$userTokenMatchId){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $post = Posts::where('id', '=', $id)->where('author_id', '=', $fields['author_id'])->update(['status' => 'deleted']);
+
+        if($post){
+            return response([
+                'message' => 'delete successful',
+            ], 201);
+        }else{
+            return response([
+                'message' => 'delete failed',
+            ], 500);
+        }
     }
 }
