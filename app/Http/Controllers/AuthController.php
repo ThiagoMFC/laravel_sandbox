@@ -11,24 +11,6 @@ use App\Lib\HelperClass;
 
 class AuthController extends Controller
 {
-    /*function checkUniqueUsername($name){
-        $i = 0;
-        $username = str_replace(" ", "_", $name);
-        $usernameUnique = $username . "_" . strval($i);
-
-        for ( ; ; ){
-            $user = User::where('username', $usernameUnique)->first();
-            if(!$user){
-                break;
-            }else{
-                $i++;
-                $usernameUnique = $username . "_" . strval($i);
-            }
-        }
-        
-        return $usernameUnique;
-    }*/
-
     public function register(Request $request){
         $fields = $request->validate([
             'first_name' => 'required|string',

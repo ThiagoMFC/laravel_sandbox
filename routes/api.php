@@ -51,11 +51,15 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
 
     Route::post('/unfollow/{follower_id}/{following_id}', [UserController::class, 'unfollow']);
 
+    Route::get('users/profile/{id}', [UserController::class, 'getProfile']);
+
     Route::post('/post', [PostController::class, 'store']);
 
     Route::post('post/edit/{post_id}', [PostController::class, 'update']);
 
     Route::post('/post/delete/{post_id}', [PostController::class, 'destroy']);
+
+    
 
 });
 

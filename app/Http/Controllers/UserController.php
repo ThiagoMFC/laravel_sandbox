@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\UserFollow;
+use App\Models\Posts;
 use Carbon\Carbon;
 use App\Lib\HelperClass;
 
@@ -79,10 +80,38 @@ class UserController extends Controller
 
     //user profile
 
-    //user main page/feed
+    public function getProfile($id, Request $request){
 
-    //other user main page
+        $user = User::where('id', '=', $id)->where('status', '=', 'active')->get();
 
+        if($user->isEmpty()){
+            return response([
+                'message' => 'cannot retrieve user',
+            ], 500);
+        }
 
+        $posts = Posts::where('author_id', '=', $id)->where('status', '!=', 'deleted')->limit(10)->get();
 
+        $token = $request->bearerToken(); //get bearer token
+
+        $helper = new HelperClass();
+        $userTokenMatchId =  $helper->checkToken($id, $token); //check if user requested own profile or someone else's
+
+        
+        if(!$userTokenMatchId){
+            $response = [
+                'user' => $user,
+                'posts' => $posts,
+                'profile' => 'else',
+            ];
+        }else{
+            $response = [
+                'user' => $user,
+                'posts' => $posts,
+                'profile' => 'self',
+            ];
+        }
+
+        return response($response, 200);
+    }
 }
