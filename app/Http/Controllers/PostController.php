@@ -10,22 +10,13 @@ use App\Models\Posts;
 
 class PostController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
+    
     public function index()
     {
         //
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
+    
     public function store(Request $request)
     {
         $fields = $request->validate([
@@ -50,7 +41,7 @@ class PostController extends Controller
             'author_id' => $fields['author_id'],
             'content' => $fields['content'],
             'post_date' => $time_now,
-            'deleted' => false,
+            'status' => 'normal',
         ]);
 
         return response([
@@ -58,35 +49,47 @@ class PostController extends Controller
         ], 201);
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
+    
     public function show($id)
     {
         //
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, $id)
+   
+    public function update($id, Request $request)
     {
-        //
+        $fields = $request->validate([
+            'author_id' => 'required|string',
+            'content' => 'required',
+        ]);
+
+        $token = $request->bearerToken();
+        $helper = new HelperClass();
+        $userTokenMatchId =  $helper->checkToken($fields['author_id'], $token);
+
+        if(!$userTokenMatchId){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $post = Posts::where('id', '=', $id)->where('author_id', '=', $fields['author_id'])->update(['content' => $fields['content'], 'status' => 'edited']);
+
+        if($post){
+            return response([
+                'message' => 'update successful',
+            ], 201);
+        }else{
+            return response([
+                'message' => 'update failed',
+            ], 500);
+        }
+
+
+        
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
+
     public function destroy($id)
     {
         //

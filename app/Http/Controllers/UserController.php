@@ -31,7 +31,7 @@ class UserController extends Controller
             ], 401);
         }
 
-        $isAlreadyFollowing = UserFollow::where('follower_id', '=', $follower)->where('following_id', '=', $following)->get();
+        $isAlreadyFollowing = UserFollow::where('follower_id', '=', $follower)->where('following_id', '=', $following)->where('status', '=', 'active')->get();
 
         if(!$isAlreadyFollowing->isEmpty()){
             return response([

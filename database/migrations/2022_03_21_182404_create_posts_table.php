@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('author_id');
             $table->string('content');
             $table->timestamp('post_date', $precision=0);
-            $table->boolean('deleted');
+            $table->string('status');
         });
     }
 

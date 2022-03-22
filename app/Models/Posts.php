@@ -15,6 +15,6 @@ class Posts extends Model
         'author_id',
         'content',
         'post_date',
-        'deleted',
+        'status',
     ];
 }
