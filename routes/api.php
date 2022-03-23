@@ -31,6 +31,8 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::get('/users/search/{name}', [UserController::class, 'search']);
 
+Route::get('/posts/show/{id}', [PostController::class, 'show']);
+
 
 //random controller -> random stuff just for fun
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Lib\HelperClass;
 use App\Models\Posts;
@@ -52,7 +53,26 @@ class PostController extends Controller
     
     public function show($id)
     {
-        //
+
+        $response = DB::table('posts as p')->select(
+            'p.id as postID',
+            'p.author_id as authorID', 
+            'p.content as content', 
+            'p.post_date as date', 
+            'p.status as status', 
+            'u.first_name as authorFName',
+            'u.last_name as authorLName',
+            'u.username as authorUsername',
+        )->leftjoin('users as u', 'u.id', '=', 'p.author_id')->where('p.id', '=', $id)->where('p.status','!=','deleted')->get();
+
+
+        if($response->isEmpty()){
+            return response([
+                'message' => 'post not found',
+            ], 500);
+        }
+
+        return response($response, 200);
     }
 
    
