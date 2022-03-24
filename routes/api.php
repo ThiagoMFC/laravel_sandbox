@@ -64,6 +64,8 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
 
     Route::post('/post/comment/{post_id}', [CommentController::class, 'store']);
 
+    Route::post('/comment/{comment_id}', [CommentController::class, 'update']);
+
 
     
 

@@ -76,6 +76,12 @@ class PostController extends Controller
             'u.username as commenterUsername',
         )->leftjoin('users as u', 'u.id', 'c.author_id')->where('c.post_id', '=', $id)->where('c.status', '!=', 'deleted')->get();
 
+        if($comments->isEmpty()){
+            $comments = [
+                'message' => 'no comments on this post',
+            ];
+        }
+
         $response = [
             'post' => $post,
             'comments' => $comments,

@@ -54,15 +54,34 @@ class CommentController extends Controller
         ], 201);
     }
 
-    
-    public function show($id)
-    {
-        //
-    }
-
     public function update(Request $request, $id)
     {
-        //
+        $fields = $request->validate([
+            'commenter_id' => 'required|string',
+            'content' => 'required',
+        ]);
+
+        $token = $request->bearerToken();
+        $helper = new HelperClass();
+        $userTokenMatchId =  $helper->checkToken($fields['commenter_id'], $token);
+
+        if(!$userTokenMatchId){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $comment = Comments::where('id', '=', $id)->where('author_id', '=', $fields['commenter_id'])->update(['content' => $fields['content'], 'status' => 'edited']);
+
+        if($comment){
+            return response([
+                'message' => 'update successful',
+            ], 201);
+        }else{
+            return response([
+                'message' => 'update failed',
+            ], 500);
+        }
     }
 
     
