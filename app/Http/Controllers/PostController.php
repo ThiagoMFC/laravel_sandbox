@@ -47,7 +47,7 @@ class PostController extends Controller
     public function show($id)
     {
 
-        $response = DB::table('posts as p')->select(
+        $post = DB::table('posts as p')->select(
             'p.id as postID',
             'p.author_id as authorID', 
             'p.content as content', 
@@ -59,11 +59,27 @@ class PostController extends Controller
         )->leftjoin('users as u', 'u.id', '=', 'p.author_id')->where('p.id', '=', $id)->where('p.status','!=','deleted')->get();
 
 
-        if($response->isEmpty()){
+        if($post->isEmpty()){
             return response([
                 'message' => 'post not found',
             ], 500);
         }
+
+        $comments = DB::table('comments as c')->select(
+            'c.id as commentID',
+            'c.post_id as postID',
+            'c.author_id as commenterID',
+            'c.content as content',
+            'c.date_posted as postedDate',
+            'u.first_name as commenterFName',
+            'u.last_name as commenterLName',
+            'u.username as commenterUsername',
+        )->leftjoin('users as u', 'u.id', 'c.author_id')->where('c.post_id', '=', $id)->where('c.status', '!=', 'deleted')->get();
+
+        $response = [
+            'post' => $post,
+            'comments' => $comments,
+        ];
 
         return response($response, 200);
     }
