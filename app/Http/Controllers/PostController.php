@@ -10,14 +10,7 @@ use App\Lib\HelperClass;
 use App\Models\Posts;
 
 class PostController extends Controller
-{
-    
-    public function index()
-    {
-        //
-    }
-
-    
+{   
     public function store(Request $request)
     {
         $fields = $request->validate([

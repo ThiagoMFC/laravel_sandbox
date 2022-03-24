@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RandomController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\CommentController;
 
 
 /*
@@ -60,6 +61,9 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
     Route::post('post/edit/{post_id}', [PostController::class, 'update']);
 
     Route::post('/post/delete/{post_id}', [PostController::class, 'destroy']);
+
+    Route::post('/comment/{post_id}', [CommentController::class, 'store']);
+
 
     
 
