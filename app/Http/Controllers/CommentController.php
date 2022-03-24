@@ -85,8 +85,33 @@ class CommentController extends Controller
     }
 
     
-    public function destroy($id)
+    public function destroy($id, Request $request)
     {
-        //
+        $fields = $request->validate([
+            'commenter_id' => 'required',
+        ]);
+
+        $token = $request->bearerToken();
+
+        $helper = new HelperClass();
+        $validateUser = $helper->checkToken($fields['commenter_id'], $token);
+
+        if(!$validateUser){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $comments = Comments::where('id', '=', $id)->where('author_id', '=', $fields['commenter_id'])->update(['status'=>'deleted']);
+
+        if($comments){
+            return response([
+                'message' => 'delete successful',
+            ], 201);
+        }else{
+            return response([
+                'message' => 'delete failed',
+            ], 500);
+        }
     }
 }
