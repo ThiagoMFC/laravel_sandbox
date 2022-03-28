@@ -71,6 +71,8 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
 
     Route::post('post/like/{post_id}', [PostLikesController::class, 'addLike']);
 
+    Route::post('post/remove/like/{post_id}', [PostLikesController::class, 'removeLike']);
+
 
     
 

@@ -59,4 +59,36 @@ class PostLikesController extends Controller
         ], 201);
 
     }
+
+    public function removeLike(Request $request, $postId){
+
+        $fields = $request->validate([
+            'user_id' => 'required',
+        ]);
+
+        $token = $request->bearerToken();
+
+        $helper = new HelperClass();
+        $validateUser = $helper->checkToken($fields['user_id'], $token);
+
+        if(!$validateUser){
+            return response([
+                'message' => 'invalid request, invalid user',
+            ], 401);
+        }
+
+       $postLike = PostLikes::where('post_id', '=', $postId)->where('user_id', '=', $fields['user_id'])->where('status', '!=', 'deleted')->update(['status' => 'deleted']);
+
+        if($postLike){
+            return response([
+                'message' => 'like removed',
+            ], 201);
+        }else{
+            return response([
+                'message' => 'remove like failed',
+            ], 500);
+        }
+
+
+    }
 }
