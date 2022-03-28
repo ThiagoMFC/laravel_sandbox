@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Lib\HelperClass;
 use App\Models\Posts;
+use App\Models\PostLikes;
 
 class PostController extends Controller
 {   
@@ -44,7 +45,7 @@ class PostController extends Controller
     }
 
     
-    public function show($id)
+    public function show(Request $request, $id)
     {
 
         $post = DB::table('posts as p')->select(
@@ -82,8 +83,26 @@ class PostController extends Controller
             ];
         }
 
+        $postLikes = PostLikes::where('post_id', '=', $id)->where('status', '!=', 'deleted')->count();
+
+        $token = $request->bearerToken();
+        $userLiked = false;
+
+        if($token){
+            $user = DB::table('users as u')->select('u.id as userId')->where('remember_token', '=', $token)->get();
+            
+            $checkUserLiked = PostLikes::where('user_id', '=', $user[0]->userId)->where('post_id', '=', $id)->where('status', '!=', 'deleted')->exists();
+
+            if($checkUserLiked){
+                $userLiked = true;
+            }
+        }
+
+        
         $response = [
             'post' => $post,
+            'likes' => $postLikes,
+            'has_user_liked' => $userLiked,
             'comments' => $comments,
         ];
 
