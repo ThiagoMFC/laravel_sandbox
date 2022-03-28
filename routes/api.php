@@ -7,6 +7,7 @@ use App\Http\Controllers\RandomController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\PostLikesController;
 
 
 /*
@@ -67,6 +68,8 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
     Route::post('/comment/{comment_id}', [CommentController::class, 'update']);
 
     Route::post('/comment/delete/{comment_id}', [CommentController::class, 'destroy']);
+
+    Route::post('post/like/{post_id}', [PostLikesController::class, 'addLike']);
 
 
     
