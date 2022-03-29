@@ -8,6 +8,7 @@ use App\Models\UserFollow;
 use App\Models\Posts;
 use Carbon\Carbon;
 use App\Lib\HelperClass;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -113,5 +114,35 @@ class UserController extends Controller
         }
 
         return response($response, 200);
+    }
+
+    public function getFeed(Request $request){
+
+        $token = $request->bearerToken();
+        $user = DB::table('users as u')->select('u.id as userId')->where('remember_token', '=', $token)->get();
+
+        $follows = DB::table('user_follows as uf')->select('uf.following_id as followingId')->where('uf.follower_id', '=', $user[0]->userId)->where('uf.status', '!=', 'inactive')->get();
+
+        $followIDs = [$user[0]->userId];
+
+        for($i = 0; $i < count($follows); $i++){
+            array_push($followIDs, $follows[$i]->followingId);
+        }
+
+        $posts = DB::table('posts as p')->select(
+            'p.id',
+            'p.author_id',
+            'p.content',
+            'p.post_date',
+            'p.status',
+            'u.first_name',
+            'u.last_name',
+            'u.username'
+        )->leftJoin('users as u', 'u.id', 'p.author_id')->whereIn('p.author_id', $followIDs)->where('p.status', '!=', 'deleted')->where('u.status', '!=', 'deleted')->get();
+
+        
+
+
+        return response($posts, 200);
     }
 }

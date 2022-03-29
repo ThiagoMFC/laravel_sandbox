@@ -57,6 +57,8 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
 
     Route::get('users/profile/{id}', [UserController::class, 'getProfile']);
 
+    Route::get('users/feed', [UserController::class, 'getFeed']);
+
     Route::post('/post', [PostController::class, 'store']);
 
     Route::post('post/edit/{post_id}', [PostController::class, 'update']);
