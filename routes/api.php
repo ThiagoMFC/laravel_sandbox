@@ -42,6 +42,12 @@ Route::get('/test', [RandomController::class, 'test']);
 
 Route::post('/random', [RandomController::class, 'switchcase']);
 
+Route::get('/challenges/diff/{array1}/{array2}', [RandomController::class, 'diff']);
+
+Route::get('/challenges/zeroes-to-end/{array}', [RandomController::class, 'endZero']);
+
+Route::get('challenges/unique-in-order/{string}', [RandomController::class, 'uniqueInOrder']);
+
 // end of random stuff
 
 

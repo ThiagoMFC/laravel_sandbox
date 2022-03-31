@@ -72,4 +72,56 @@ class RandomController extends Controller
         }
         return $randomString;
     }
+
+    //CHALLENGES
+
+    /*
+    Your goal is to implement a difference function, which subtracts one list from another and returns the result.
+    It should remove all values from list a, which are present in list b keeping their order.
+    */
+    public function diff($string1, $string2){
+
+        $array1 = explode(',', $string1);
+        $array2 = explode(',', $string2);
+
+        return array_values(array_diff($array1, $array2));
+    }
+
+    /*
+    Write an algorithm that takes an array and moves all of the zeros to the end, preserving the order of the other elements.
+    */
+
+    public function endZero($string){
+
+        $array = explode(',', $string);
+        $tempArray = array_diff($array, [0]);
+
+        $finalArray = array_merge($tempArray, array_fill(0, count($array)-count($tempArray), 0));
+
+        return $finalArray;
+    }
+
+    /*
+    Implement the function unique_in_order which takes as argument a sequence and returns a list of items without any elements 
+    with the same value next to each other and preserving the original order of elements.
+    */
+
+    public function uniqueInOrder($string){
+        
+        $array = str_split($string, 1);
+        array_push($array, '-'); //mark end of array. lazy, I know. can't allow it in original sequence
+        
+        $array2 = [];
+
+        for($i = 0; $i < count($array)-1; $i++){ //-1 to prevent [$i+1] going out of bounds
+            
+            if($array[$i] != $array[$i+1]){
+                array_push($array2, $array[$i]);
+            }
+            
+            
+        }
+
+        return $array2;
+    }
 }
