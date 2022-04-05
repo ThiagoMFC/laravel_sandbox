@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use App\Models\UserBattleships;
+use Carbon\Carbon;
+use App\Lib\HelperClass;
 
 class RandomController extends Controller
 {
@@ -129,17 +132,26 @@ class RandomController extends Controller
     /*Battleship-like game*/
 
     public function battleshipRules(){
+
         return response([
             "rules" => [
                 "1" => "ships have sequential positions and variable in length (two 3s, three 5s, one 6)",
                 "2" => "ships can be positioned either in horizontal (i.e A1, A2, A3...) or vertical (i.e A1, B1, C1...)",
                 "3" => "positions are designated by a letter (A to E) and a number (1 to 20)",
-                "4" => "after 40 guesses game ends and user loses if haven't found and sank all ships"
+                "4" => "after 40 guesses game ends and user loses if haven't found and sank all ships",
+                "5" => 'you have to be logged in to play'
             ],
         ], 200);
     }
 
-    public function battleshipStart(){
+    public function battleshipStart(Request $request){
+
+        $fields = $request->validate([
+            'user_id' => 'required',
+        ]);
+
+        $token = $request->bearerToken();
+
         $orientationAxis = ['vertical', 'horizontal'];
         $verticalPositionArray = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
         $horizontalPositionArray = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20];
@@ -179,14 +191,27 @@ class RandomController extends Controller
                     $position = $positions[$j] . $horizontalPositionArray[$number];
 
                     //try to find if position is already taken by other ship. sometimes it catches, sometimes doesn't. no idea why
-                    if(array_search($position, array_column($table, 1)) === false){
+                    /*if(array_search($position, array_column($table, 1)) === false){
                         array_push($ships, $position);
                     }else{
                         $errorCount++;
                         array_push($errorArray, $position);
                         $repeatedPosition = true;
                         break;
+                    }*/
+
+                    for($k = 0; $k < sizeOf($table); $k++){
+                        for($l = 0; $l < sizeOf($table[$k]); $l++){
+                            if($position == $table[$k][$l]){
+                                $errorCount++;
+                                array_push($errorArray, $position);
+                                $repeatedPosition = true;
+                                break 3;
+                            }
+                        }
                     }
+
+                    array_push($ships, $position);
 
                 }
 
@@ -207,14 +232,27 @@ class RandomController extends Controller
 
                     $position = $verticalPositionArray[$letter] . $positions[$j];
 
-                    if(array_search($position, array_column($table, 1)) === false){
+                    /*if(array_search($position, array_column($table, 1)) === false){
                         array_push($ships, $position);
                     }else{
                         $errorCount++;
                         array_push($errorArray, $position);
                         $repeatedPosition = true;
                         break;
+                    }*/
+
+                    for($k = 0; $k < sizeOf($table); $k++){
+                        for($l = 0; $l < sizeOf($table[$k]); $l++){
+                            if($position == $table[$k][$l]){
+                                $errorCount++;
+                                array_push($errorArray, $position);
+                                $repeatedPosition = true;
+                                break 3;
+                            }
+                        }
                     }
+
+                    array_push($ships, $position);
 
                 }
 
@@ -235,12 +273,68 @@ class RandomController extends Controller
             
         }
 
+        $serializedTable = serialize($table);
+        $now = Carbon::now();
+
+
+        $userBattleships = UserBattleships::create([
+            'user_id' => $fields['user_id'],
+            'user_token' => $token,
+            'status' => 'ongoing',
+            'result' => 'none',
+            'ships' => $serializedTable,
+            'hits' => 0,
+            'misses' => 0,
+            'date_started' => $now
+        ]);
+
+        if($userBattleships){
+            return response([
+                "message" => "game started",
+                "ships" => $numberOfShips,
+            ], 201);
+        }else{
+            return response([
+                'message' => 'failed to start game',
+            ], 500);
+        }
+
 
         return response([
-            "a" => $table,
-            "b" => $errorCount,
-            "c" => $errorArray,
+            "message" => "game started",
+            "ships" => $numberOfShips,
         ], 200);
+    }
+
+    public function battleshipEnd(Request $request){
+
+        $fields = $request->validate([
+            'user_id' => 'required',
+        ]);
+
+        $token = $request->bearerToken();
+
+        $helper = new HelperClass();
+        $validateUser = $helper->checkToken($fields['user_id'], $token);
+
+        if(!$validateUser){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $battleships = UserBattleships::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)->where('status', '=', 'ongoing')->update(['status' => 'finished', 'result' => 'loss']);
+
+        if($battleships){
+            return response([
+                'message' => 'game closed',
+            ], 201);
+        }else{
+            return response([
+                'message' => 'failed to close game',
+            ], 500);
+        }
+
     }
 
 }

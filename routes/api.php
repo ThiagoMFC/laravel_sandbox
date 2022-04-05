@@ -50,7 +50,9 @@ Route::get('challenges/unique-in-order/{string}', [RandomController::class, 'uni
 
 Route::get('challenges/battleship-rules', [RandomController::class, 'battleshipRules']);
 
-Route::get('challenges/battleship-start', [RandomController::class, 'battleshipStart']);
+Route::post('challenges/battleship-start', [RandomController::class, 'battleshipStart']);
+
+Route::post('challenges/battleship-end', [RandomController::class, 'battleshipEnd']);
 
 // end of random stuff
 
