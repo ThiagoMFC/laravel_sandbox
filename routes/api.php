@@ -48,6 +48,10 @@ Route::get('/challenges/zeroes-to-end/{array}', [RandomController::class, 'endZe
 
 Route::get('challenges/unique-in-order/{string}', [RandomController::class, 'uniqueInOrder']);
 
+Route::get('challenges/battleship-rules', [RandomController::class, 'battleshipRules']);
+
+Route::get('challenges/battleship-start', [RandomController::class, 'battleshipStart']);
+
 // end of random stuff
 
 
