@@ -7,6 +7,7 @@ use Illuminate\Http\Response;
 use App\Models\UserBattleships;
 use Carbon\Carbon;
 use App\Lib\HelperClass;
+use Illuminate\Support\Facades\DB;
 
 class RandomController extends Controller
 {
@@ -144,6 +145,40 @@ class RandomController extends Controller
         ], 200);
     }
 
+    function checkRepeatedValueOnTable($position, $table){
+
+        $repeatedPosition = false;
+
+        for($k = 0; $k < sizeOf($table); $k++){
+            for($l = 0; $l < sizeOf($table[$k]); $l++){
+                if($position == $table[$k][$l]){
+                   
+                    $repeatedPosition = true;
+                    break 2;
+                }
+            }
+        }
+
+        return $repeatedPosition;
+    }
+
+    function removeFromTableWithValue($position, $table){
+
+        for($k = 0; $k < sizeOf($table); $k++){
+            for($l = 0; $l < sizeOf($table[$k]); $l++){
+                if($position == $table[$k][$l]){
+
+                    unset($table[$k][$l]);
+                    $table[$k] = array_values($table[$k]);
+                   
+                    break 2;
+                }
+            }
+        }
+
+        return $table;
+    }
+
     public function battleshipStart(Request $request){
 
         $fields = $request->validate([
@@ -190,6 +225,12 @@ class RandomController extends Controller
 
                     $position = $positions[$j] . $horizontalPositionArray[$number];
 
+                    $repeatedPosition = $this->checkRepeatedValueOnTable($position, $table);
+
+                    if($repeatedPosition){
+                        break;
+                    }
+
                     //try to find if position is already taken by other ship. sometimes it catches, sometimes doesn't. no idea why
                     /*if(array_search($position, array_column($table, 1)) === false){
                         array_push($ships, $position);
@@ -200,7 +241,7 @@ class RandomController extends Controller
                         break;
                     }*/
 
-                    for($k = 0; $k < sizeOf($table); $k++){
+                    /*for($k = 0; $k < sizeOf($table); $k++){
                         for($l = 0; $l < sizeOf($table[$k]); $l++){
                             if($position == $table[$k][$l]){
                                 $errorCount++;
@@ -209,7 +250,7 @@ class RandomController extends Controller
                                 break 3;
                             }
                         }
-                    }
+                    }*/
 
                     array_push($ships, $position);
 
@@ -232,6 +273,12 @@ class RandomController extends Controller
 
                     $position = $verticalPositionArray[$letter] . $positions[$j];
 
+                    $repeatedPosition = $this->checkRepeatedValueOnTable($position, $table);
+
+                    if($repeatedPosition){
+                        break;
+                    }
+
                     /*if(array_search($position, array_column($table, 1)) === false){
                         array_push($ships, $position);
                     }else{
@@ -241,7 +288,7 @@ class RandomController extends Controller
                         break;
                     }*/
 
-                    for($k = 0; $k < sizeOf($table); $k++){
+                    /*for($k = 0; $k < sizeOf($table); $k++){
                         for($l = 0; $l < sizeOf($table[$k]); $l++){
                             if($position == $table[$k][$l]){
                                 $errorCount++;
@@ -250,7 +297,7 @@ class RandomController extends Controller
                                 break 3;
                             }
                         }
-                    }
+                    }*/
 
                     array_push($ships, $position);
 
@@ -299,11 +346,6 @@ class RandomController extends Controller
             ], 500);
         }
 
-
-        return response([
-            "message" => "game started",
-            "ships" => $numberOfShips,
-        ], 200);
     }
 
     public function battleshipEnd(Request $request){
@@ -333,6 +375,58 @@ class RandomController extends Controller
             return response([
                 'message' => 'failed to close game',
             ], 500);
+        }
+
+    }
+
+    public function battleshipHit(Request $request, $hit){
+        $fields = $request->validate([
+            'user_id' => 'required',
+        ]);
+
+        $token = $request->bearerToken();
+
+        $helper = new HelperClass();
+        $validateUser = $helper->checkToken($fields['user_id'], $token);
+
+        if(!$validateUser){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $ships = DB::table('user_battleships as ub')->select('ub.ships as ships', 'ub.hits as hits', 'ub.misses as misses')->where('user_id', '=', $fields['user_id'])
+        ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
+
+        $table = unserialize($ships[0]->ships);
+
+        $didHit = $this->checkRepeatedValueOnTable($hit, $table);
+
+        if($didHit){
+
+            $table = $this->removeFromTableWithValue($hit, $table);
+            $serializedTable = serialize($table);
+            $hits = $ships[0]->hits + 1;
+
+            $ships2 = UserBattleships::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)
+            ->where('status', '=', 'ongoing')->update(['ships' => $serializedTable, 'hits' => $hits]);
+
+
+            return response([
+                "message" => "that's a hit!",
+                //"table" => $table
+            ]);
+        }else{
+
+            $misses = $ships[0]->misses + 1;
+
+            $ships2 = UserBattleships::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)
+            ->where('status', '=', 'ongoing')->update(['misses' => $misses]);
+
+            return response([
+                "message" => "aww that's a miss",
+                //"table" => $table
+            ]);
         }
 
     }
