@@ -56,6 +56,10 @@ Route::post('challenges/battleship-end', [RandomController::class, 'battleshipEn
 
 Route::post('challenges/battleship/{hit}', [RandomController::class, 'battleshipHit']);
 
+Route::post('challenges/battleship-reveal', [RandomController::class, 'battleshipReveal']);
+
+Route::post('challenges/battleship-hint', [RandomController::class, 'battleshipHint']);
+
 // end of random stuff
 
 

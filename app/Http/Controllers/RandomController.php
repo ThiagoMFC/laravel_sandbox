@@ -179,6 +179,18 @@ class RandomController extends Controller
         return $table;
     }
 
+    function sankShips($table){
+        $count = 0;
+
+        for($i = 0; $i < sizeOf($table); $i++){
+            if(empty($table[$i])){
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
     public function battleshipStart(Request $request){
 
         $fields = $request->validate([
@@ -405,29 +417,140 @@ class RandomController extends Controller
         if($didHit){
 
             $table = $this->removeFromTableWithValue($hit, $table);
+
             $serializedTable = serialize($table);
             $hits = $ships[0]->hits + 1;
 
-            $ships2 = UserBattleships::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)
-            ->where('status', '=', 'ongoing')->update(['ships' => $serializedTable, 'hits' => $hits]);
+            //win condition
+            $sankships = $this->sankShips($table);
+            if($sankships == 6){
+                $ships2 = UserBattleships::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)
+                ->where('status', '=', 'ongoing')->update(['ships' => $serializedTable, 'hits' => $hits, 'status' => 'finished', 'result' => 'win']);
 
+                return response([
+                    "message" => "that's a hit! no more ships, you won!",
+                    //"table" => $table
+                ]);
 
-            return response([
-                "message" => "that's a hit!",
-                //"table" => $table
-            ]);
+            }else{
+                $ships2 = UserBattleships::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)
+                ->where('status', '=', 'ongoing')->update(['ships' => $serializedTable, 'hits' => $hits]);
+
+                return response([
+                    "message" => "that's a hit! ". 6-$sankships . " ships to go!",
+                    //"table" => $table
+                ]);
+            }
         }else{
 
             $misses = $ships[0]->misses + 1;
+
+            //lose condition
+            if($misses >= 20){
+
+                $ships2 = UserBattleships::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)
+                ->where('status', '=', 'ongoing')->update(['misses' => $misses, 'status' => 'finished', 'result' => 'loss']);
+
+                return response([
+                    "message" => "aww that's a miss. you have no more guesses. you lost",
+                    "ship positions" => $table
+                ]);
+
+            }
 
             $ships2 = UserBattleships::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)
             ->where('status', '=', 'ongoing')->update(['misses' => $misses]);
 
             return response([
-                "message" => "aww that's a miss",
+                "message" => "aww that's a miss. you have ". 20-$misses . " wrong guesses left",
                 //"table" => $table
             ]);
         }
+
+    }
+
+    public function battleshipReveal(Request $request){
+        $fields = $request->validate([
+            'user_id' => 'required',
+        ]);
+
+        $token = $request->bearerToken();
+
+        $helper = new HelperClass();
+        $validateUser = $helper->checkToken($fields['user_id'], $token);
+
+        if(!$validateUser){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $ships = DB::table('user_battleships as ub')->select('ub.ships as ships', 'ub.hits as hits', 'ub.misses as misses')->where('user_id', '=', $fields['user_id'])
+        ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
+
+        $table = unserialize($ships[0]->ships);
+
+        $battleships = UserBattleships::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)->where('status', '=', 'ongoing')->update(['status' => 'finished', 'result' => 'loss']);
+
+        if($battleships){
+            return response([
+                'message' => 'oh no, you gave up!',
+                'ship positions' => $table
+            ], 201);
+        }else{
+            return response([
+                'message' => 'failed to close game',
+            ], 500);
+        }
+
+    }
+
+    public function battleshipHint(Request $request){
+
+        $token = $request->bearerToken();
+        $fields = $request->validate([
+            'user_id' => 'required'
+        ]);
+
+        $helper = new HelperClass();
+        $validateUser = $helper->checkToken($fields['user_id'], $token);
+
+        if(!$validateUser){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $ships = DB::table('user_battleships as ub')->select('ub.ships as ships', 'ub.hits as hits', 'ub.misses as misses')->where('user_id', '=', $fields['user_id'])
+        ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
+
+        $table = unserialize($ships[0]->ships);
+
+        $shipsDetails = $this->remainingShips($table);
+
+        return response($shipsDetails, 200);
+
+    }
+
+    function remainingShips($table){
+        $ships = [];
+        
+        $shipCount = 0;
+        
+        for($i = 0; $i < sizeOf($table); $i++){
+            if(!empty($table[$i])){
+                $shipCount++;
+                $sizeCount = 0;
+                for($j = 0; $j < sizeOf($table[$i]); $j++){
+                    $sizeCount++;
+                }
+
+                $shipDetail = [$shipCount => $sizeCount];
+                array_push($ships, $shipDetail);
+            }
+        }
+
+        return $ships;
 
     }
 
