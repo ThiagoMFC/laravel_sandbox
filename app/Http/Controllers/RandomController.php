@@ -130,7 +130,7 @@ class RandomController extends Controller
     }
 
 
-    /*Battleship-like game*/
+    /*Battleship-like game -------------------------------------------------------------------------------------------------------------------------------------------------*/
 
     public function battleshipRules(){
 
@@ -553,5 +553,27 @@ class RandomController extends Controller
         return $ships;
 
     }
+
+    /*-----------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+    /*
+    Return the sum of all the multiples of 3 or 5 below the number passed in. Additionally, if the number is negative, return 0
+    */
+
+    public function returnSum($number){
+
+        $sum = 0;
+
+        //no reason to have $i be smaller than 3
+        for($i = 3; $i < $number; $i++){
+            if($i % 3 === 0 || $i % 5 === 0){
+                $sum += $i;
+            }
+        }
+
+        return $sum;
+    }
+
+    
 
 }

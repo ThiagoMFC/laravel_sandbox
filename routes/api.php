@@ -48,17 +48,9 @@ Route::get('/challenges/zeroes-to-end/{array}', [RandomController::class, 'endZe
 
 Route::get('challenges/unique-in-order/{string}', [RandomController::class, 'uniqueInOrder']);
 
-Route::get('challenges/battleship-rules', [RandomController::class, 'battleshipRules']);
+Route:: get('challenges/return-sum-multiples-3-5/{number}', [RandomController::class, 'returnSum']);
 
-Route::post('challenges/battleship-start', [RandomController::class, 'battleshipStart']);
 
-Route::post('challenges/battleship-end', [RandomController::class, 'battleshipEnd']);
-
-Route::post('challenges/battleship/{hit}', [RandomController::class, 'battleshipHit']);
-
-Route::post('challenges/battleship-reveal', [RandomController::class, 'battleshipReveal']);
-
-Route::post('challenges/battleship-hint', [RandomController::class, 'battleshipHint']);
 
 // end of random stuff
 
@@ -93,8 +85,19 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
 
     Route::post('post/remove/like/{post_id}', [PostLikesController::class, 'removeLike']);
 
+ //random stuff that need auth
 
-    
+    Route::get('challenges/battleship-rules', [RandomController::class, 'battleshipRules']);
+
+    Route::post('challenges/battleship-start', [RandomController::class, 'battleshipStart']);
+
+    Route::post('challenges/battleship-end', [RandomController::class, 'battleshipEnd']);
+
+    Route::post('challenges/battleship/{hit}', [RandomController::class, 'battleshipHit']);
+
+    Route::post('challenges/battleship-reveal', [RandomController::class, 'battleshipReveal']);
+
+    Route::post('challenges/battleship-hint', [RandomController::class, 'battleshipHint']);
 
 });
 
