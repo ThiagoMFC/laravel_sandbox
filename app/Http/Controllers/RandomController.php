@@ -604,4 +604,33 @@ class RandomController extends Controller
 
     }
 
+    /*
+    Convert a string to a new string where each character in the new string is "(" if that character appears only once in the original string, 
+    or ")" if that character appears more than once in the original string. Ignore capitalization when determining if a character is a duplicate.
+    */
+
+    public function encodeDuplicate($word){
+
+        $word = strtolower($word);
+        $array = str_split($word, 1);
+        $encodedString = "";
+        
+        for($i = 0; $i < count($array); $i++){
+            $isDuplicate = false;
+            for($j = 0; $j < count($array); $j++){
+                if($array[$i] == $array[$j] && $i != $j){
+                    $isDuplicate = true;
+                }
+            }
+            if($isDuplicate){
+                $encodedString .= ")";
+            }else{
+                $encodedString .= "(";
+            }
+        }
+        
+        return $encodedString;
+
+    }
+
 }

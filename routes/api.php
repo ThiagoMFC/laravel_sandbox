@@ -52,6 +52,8 @@ Route:: get('challenges/return-sum-multiples-3-5/{number}', [RandomController::c
 
 Route::get('challenges/validate-ip/{ip}', [RandomController::class, 'validateIp']);
 
+Route::get('challenges/encode-duplicate/{word}', [RandomController::class, 'encodeDuplicate']);
+
 
 
 // end of random stuff
