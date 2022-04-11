@@ -574,6 +574,34 @@ class RandomController extends Controller
         return $sum;
     }
 
-    
+    /*
+    Write an algorithm that will identify valid IPv4 addresses in dot-decimal format. 
+    IPs should be considered valid if they consist of four octets, with values between 0 and 255, inclusive.
+    */
+
+    public function validateIp($ip){
+
+        /*$array = explode('.', $ip);
+
+        if(count($array) == 4){
+            foreach($array as $n){
+                if($n > 255 || $n < 0 || !ctype_digit($n)){
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
+
+        return true;*/
+
+        //why reinvent the wheel
+        if(filter_var($ip, FILTER_VALIDATE_IP)){
+            return 'true';
+        }else{
+            return 'false';
+        }
+
+    }
 
 }

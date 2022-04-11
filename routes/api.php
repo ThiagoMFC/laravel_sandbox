@@ -50,6 +50,8 @@ Route::get('challenges/unique-in-order/{string}', [RandomController::class, 'uni
 
 Route:: get('challenges/return-sum-multiples-3-5/{number}', [RandomController::class, 'returnSum']);
 
+Route::get('challenges/validate-ip/{ip}', [RandomController::class, 'validateIp']);
+
 
 
 // end of random stuff
