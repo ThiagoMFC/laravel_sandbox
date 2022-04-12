@@ -633,4 +633,37 @@ class RandomController extends Controller
 
     }
 
+    /*
+    CamelCase method for strings. All words must have their first letter capitalized without spaces.
+    */
+
+    public function camelCase($string){
+
+        return str_replace(' ', '', ucwords($string));
+    }
+
+    /*
+     get an integer array as parameter and process every number from this array in a way that 
+     if the number has an integer square root, take it, otherwise square the number.
+    */
+
+    public function squareRoot($string){ //this case will be a string from the browser
+
+        $array = explode(',', $string); //transform into array and proceed
+
+        $finalArray = [];
+  
+        for($i = 0; $i < count($array); $i++ ){
+        
+            if(fmod(sqrt($array[$i]), 1) == 0){
+            array_push($finalArray, sqrt($array[$i]));
+            
+            }else{
+            array_push($finalArray, $array[$i]*$array[$i]);
+            }
+        }
+        
+        return $finalArray;
+    }
+
 }

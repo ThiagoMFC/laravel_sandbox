@@ -54,6 +54,10 @@ Route::get('challenges/validate-ip/{ip}', [RandomController::class, 'validateIp'
 
 Route::get('challenges/encode-duplicate/{word}', [RandomController::class, 'encodeDuplicate']);
 
+Route::get('challenges/camelcase/{string}', [RandomController::class, 'camelCase']);
+
+Route::get('challenges/square-root-or-not/{string}', [RandomController::class, 'squareRoot']);
+
 
 
 // end of random stuff
