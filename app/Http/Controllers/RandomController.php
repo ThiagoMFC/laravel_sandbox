@@ -667,10 +667,10 @@ class RandomController extends Controller
     }
 
     /*
-     Morse code decoder.
+     Morse code decoder. 1 space (' ') = space between characters, 3 spaces ('   ') = space between words.
     */
 
-    public function morseDecoder($code){
+    public function morseDecoder($string){
 
         $morseCode = [
             '.-' => 'a',
@@ -699,23 +699,23 @@ class RandomController extends Controller
             '-..-' => 'x',
             '-.--' => 'y',
             '--..' => 'z',
-            '.----' => 1,
-            '..---' => 2,
-            '...--' => 3,
-            '....-' => 4,
-            '.....' => 5,
-            '-....' => 6,
-            '--...' => 7,
-            '---..' => 8,
-            '----.' => 9,
-            '-----' => 0,
+            '.----' => '1',
+            '..---' => '2',
+            '...--' => '3',
+            '....-' => '4',
+            '.....' => '5',
+            '-....' => '6',
+            '--...' => '7',
+            '---..' => '8',
+            '----.' => '9',
+            '-----' => '0',
             '.-.-.-' => '.',
             '--..--' => ',',
             '..--..' => '?',
         ];
 
 
-        $words = explode('   ', trim($code));
+        $words = explode('   ', trim($string));
         foreach ($words as &$word) {
             $letters = explode(' ', trim($word));
             $decodedWord = '';
@@ -727,6 +727,65 @@ class RandomController extends Controller
 
         return implode(' ', $words);
 
+    }
+
+    public function morseEncoder($string){
+
+        $morseCode = [
+            'a' => '.-',
+            'b' => '-...',
+            'c' => '-.-.',
+            'd' => '-..',
+            'e' => '.',
+            'f' => '..-.',
+            'g' => '--.',
+            'h' => '....',
+            'i' => '..',
+            'j' => '.---',
+            'k' => '-.-',
+            'l' => '.-..',
+            'm' => '--',
+            'n' => '-.',
+            'o' => '---',
+            'p' => '.--.',
+            'q' => '--.-',
+            'r' => '.-.',
+            's' => '...',
+            't' => '-',
+            'u' => '..-',
+            'v' => '...-',
+            'w' => '.--',
+            'x' => '-..-',
+            'y' => '-.--',
+            'z' => '--..',
+            '0' => '-----',
+            '1' => '.----',
+            '2' => '..---',
+            '3' => '...--',
+            '4' => '....-',
+            '5' => '.....',
+            '6' => '-....',
+            '7' => '--...',
+            '8' => '---..',
+            '9' => '----.',
+            '.' => '.-.-.-',
+            ',' => '--..--',
+            '?' => '..--..',
+            ' ' => '   ',
+        ];
+
+        $words = explode(' ', trim($string));
+        foreach ($words as &$word) {
+            $letters = str_split($word);
+            $decodedWord = '';
+            foreach ($letters as $letter) {
+                $decodedWord .= $morseCode[$letter]. ' ';
+            }
+            $word = $decodedWord;
+        }
+
+        return implode(str_repeat(' ', 3), $words);
+        
     }
 
 }

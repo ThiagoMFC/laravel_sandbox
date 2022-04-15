@@ -58,7 +58,9 @@ Route::get('challenges/camelcase/{string}', [RandomController::class, 'camelCase
 
 Route::get('challenges/square-root-or-not/{string}', [RandomController::class, 'squareRoot']);
 
-Route::get('challenges/morse-decoder/{code}', [RandomController::class, 'morseDecoder']);
+Route::get('challenges/morse-decoder/{string}', [RandomController::class, 'morseDecoder']);
+
+Route::get('challenges/morse-encoder/{string}', [RandomController::class, 'morseEncoder']);
 
 
 
