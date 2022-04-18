@@ -62,6 +62,8 @@ Route::get('challenges/morse-decoder/{string}', [RandomController::class, 'morse
 
 Route::get('challenges/morse-encoder/{string}', [RandomController::class, 'morseEncoder']);
 
+Route::get('challenges/max-array-string-diff/{string1}/{string2}', [RandomController::class, 'maxDifference']);
+
 
 
 // end of random stuff

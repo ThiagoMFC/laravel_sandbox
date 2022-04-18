@@ -788,4 +788,41 @@ class RandomController extends Controller
         
     }
 
+
+    /*
+    You are given two arrays a1 and a2 of strings. Each string is composed with letters from a to z. 
+    Let x be any string in the first array and y be any string in the second array. Find the biggest differente 
+    between x and y. If a1 and/or a2 are empty return -1
+    */
+
+    public function maxDifference($string1, $string2){
+
+        $a1 = explode(',', $string1);
+        $a2 = explode(',', $string2);
+
+        if(count($a1) == 0 || count($a2) == 0){
+            return -1;
+        }
+
+        $diff = 0;
+    
+        for($i = 0; $i < count($a1); $i++){
+            for($j = 0; $j < count($a2); $j++){
+            
+                $temp = strlen($a1[$i]) - strlen($a2[$j]);
+                
+                if($temp < 0){
+                    $temp = -1 * $temp;
+                }
+                
+                if($temp > $diff){
+                    $diff = $temp;
+                }
+            
+            }
+        }
+        
+        return $diff;
+    }
+
 }
