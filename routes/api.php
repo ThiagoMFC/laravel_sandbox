@@ -8,6 +8,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\PostLikesController;
+use App\Http\Controllers\BattleshipController;
+use App\Http\Controllers\ChessController;
 
 
 /*
@@ -64,6 +66,8 @@ Route::get('challenges/morse-encoder/{string}', [RandomController::class, 'morse
 
 Route::get('challenges/max-array-string-diff/{string1}/{string2}', [RandomController::class, 'maxDifference']);
 
+Route::get('challenges/base-converter/{num}/{base}/{convert}', [RandomController::class, 'convertNum']);
+
 
 
 // end of random stuff
@@ -101,17 +105,21 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
 
  //random stuff that need auth
 
-    Route::get('challenges/battleship-rules', [RandomController::class, 'battleshipRules']);
+    Route::get('challenges/battleship-rules', [BattleshipController::class, 'battleshipRules']);
 
-    Route::post('challenges/battleship-start', [RandomController::class, 'battleshipStart']);
+    Route::post('challenges/battleship-start', [BattleshipController::class, 'battleshipStart']);
 
-    Route::post('challenges/battleship-end', [RandomController::class, 'battleshipEnd']);
+    Route::post('challenges/battleship-end', [BattleshipController::class, 'battleshipEnd']);
 
-    Route::post('challenges/battleship/{hit}', [RandomController::class, 'battleshipHit']);
+    Route::post('challenges/battleship/{hit}', [BattleshipController::class, 'battleshipHit']);
 
-    Route::post('challenges/battleship-reveal', [RandomController::class, 'battleshipReveal']);
+    Route::post('challenges/battleship-reveal', [BattleshipController::class, 'battleshipReveal']);
 
-    Route::post('challenges/battleship-hint', [RandomController::class, 'battleshipHint']);
+    Route::post('challenges/battleship-hint', [BattleshipController::class, 'battleshipHint']);
+
+    //-----------------------------------------------------------------------------------------
+
+    Route::post('challenges/chess-start', [ChessController::class, 'initializeChessBoard']);
 
 });
 
