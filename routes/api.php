@@ -123,6 +123,8 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
 
     Route::post('challenges/chess-board', [ChessController::class, 'showBoard']);
 
+    Route::post('challenges/chess-move/{piece}/{position}', [ChessController::class, 'movePiece']);
+
 });
 
 /*Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

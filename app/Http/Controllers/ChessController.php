@@ -126,9 +126,153 @@ class ChessController extends Controller
 
     }
 
-    //move piece function -> gets piece and position
+    public function movePiece(Request $request, $piece, $position){
 
-    //functions for each piece movements. $canMoveThere -> true/false.
+        $fields = $request->validate([
+            'user_id' => 'required',
+        ]);
+
+        $token = $request->bearerToken();
+
+        $helper = new HelperClass();
+        $validateUser = $helper->checkToken($fields['user_id'], $token);
+
+        if(!$validateUser){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $game = DB::table('chess_games as cg')->select('cg.white_pieces as white', 'cg.black_pieces as black', 'cg.turns as turns')->where('user_id', '=', $fields['user_id'])
+        ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
+
+        $whitePieces = unserialize($game[0]->white);
+        $blackPieces = unserialize($game[0]->black);
+        $turn = $game[0]->turns;
+
+        $canMovePiece = [false, false];
+
+        $p = substr_replace($piece, "", -1);
+        switch($p){
+            case('pawn'): 
+                //check if user still have this specific pawn!!
+                $canMovePiece = $this->canMovePawn($piece, $position, $whitePieces, $blackPieces, $turn);
+                break;
+            
+            default: return response([
+                'message' => 'invalid piece'
+            ], 400);
+        } 
+
+        if(!$canMovePiece[0]){
+            return response([
+                'message' => 'cannot move ' . $piece . ' there'
+            ], 400);
+        }else{
+            if($canMovePiece[1]){
+                //remove piece from black_pieces
+                $blackPieces = $this->removeFromPieces($position, $blackPieces);
+                //$bp = serialize($blackPieces);
+                //move piece from white_pieces
+                $whitePieces = $this->changePiecePosition($position, $whitePieces, $piece);
+                //$wp = serialize($whitePieces);
+                //$gameUpdate = ChessGame::::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)->where('status', '=', 'ongoing')->update(['white_pieces' => $wp, 'black_pieces' => $bp, 'turns' => 1]);
+
+            }else{
+                $whitePieces = $this->changePiecePosition($position, $whitePieces, $piece);
+                //$wp = serialize($whitePieces);
+                //$gameUpdate = ChessGame::::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)->where('status', '=', 'ongoing')->update(['white_pieces' => $wp, 'turns' => 1]);
+            }
+        }
+
+        //machine move before updating tables!!
+
+        return response([
+            'white_pieces' => $whitePieces,
+            'black_pieces' => $blackPieces,
+            'turns' => $game[0]->turns+1,
+        ], 200);
+
+        //piece movement
+    }
+
+    function canMovePawn($piece, $finalPosition, $whitePieces, $blackPieces, $turn){
+
+        $canMoveThere = false;
+
+        $finalPosArray = str_split($finalPosition, 1);
+        $finalPosChar = $finalPosArray[0];
+        $finalPosInt = $finalPosArray[1];
+
+        $isOccupied = $this->isOccupied($blackPieces, $finalPosChar, $finalPosInt);
+
+        $initialPosChar = $whitePieces[$piece][0];
+        $initialPosInt = $whitePieces[$piece][1];
+
+        if($turn == 0){
+            if(($finalPosChar == $initialPosChar && $finalPosInt == $initialPosInt + 1) || ($finalPosChar == $initialPosChar && $finalPosInt == $initialPosInt + 2)){
+                $canMoveThere = true;
+            }
+        }else{
+            if($isOccupied){
+                if(($finalPosChar == chr(ord($initialPosChar)+1) && $finalPosInt == $initialPosInt + 1) || ($finalPosChar == chr(ord($initialPosChar)-1) && $finalPosInt == $initialPosInt + 1)){
+                    $canMoveThere = true;
+                }
+            }else{
+                if($finalPosChar == $initialPosChar && $finalPosInt == $initialPosInt + 1){
+                    $canMoveThere = true;
+                }
+            }
+        }
+
+        return [$canMoveThere, $isOccupied];
+
+    }
+
+    //check if final position is occupied
+    function isOccupied($blackPieces, $finalPosChar, $finalPosInt){
+
+        $isOccupied = false;
+
+        foreach($blackPieces as $piece){
+            if($piece[0] == $finalPosChar && $piece[1] == $finalPosInt){
+                $isOccupied = true;
+                break;
+            }
+        }
+
+        return $isOccupied;
+    }
+
+    function removeFromPieces($position, $pieces){
+
+        $posArray = str_split($position, 1);
+        $posChar = $posArray[0];
+        $posInt = $posArray[1];
+
+        foreach($pieces as $piece){
+            if($piece[0] == $posChar && $piece[1] == $posInt){
+                unset($pieces[$piece]);
+                break;
+            }
+        }
+
+        return $pieces;
+    }
+
+    function changePiecePosition($position, $pieces, $piece){
+
+        $posArray = str_split($position, 1);
+        $posChar = $posArray[0];
+        $posInt = $posArray[1];
+
+        $pieces[$piece][0] = $posChar;
+        $pieces[$piece][1] = $posInt;
+
+        return $pieces;
+    }
+
+    
 
     //function switch pawn when pawn reaches end of board
 
