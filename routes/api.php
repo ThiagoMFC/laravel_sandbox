@@ -121,6 +121,8 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
 
     Route::post('challenges/chess-start', [ChessController::class, 'initializeChessBoard']);
 
+    Route::post('challenges/chess-board', [ChessController::class, 'showBoard']);
+
 });
 
 /*Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

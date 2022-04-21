@@ -95,5 +95,42 @@ class ChessController extends Controller
         }
     }
 
+    public function showBoard(Request $request){
+
+        $fields = $request->validate([
+            'user_id' => 'required',
+        ]);
+
+        $token = $request->bearerToken();
+
+        $helper = new HelperClass();
+        $validateUser = $helper->checkToken($fields['user_id'], $token);
+
+        if(!$validateUser){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $game = DB::table('chess_games as cg')->select('cg.white_pieces as white', 'cg.black_pieces as black', 'cg.turns as turns')->where('user_id', '=', $fields['user_id'])
+        ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
+
+        $whitePieces = unserialize($game[0]->white);
+        $blackPieces = unserialize($game[0]->black);
+
+        return response([
+            'white_pieces' => $whitePieces,
+            'black_pieces' => $blackPieces,
+            'turns' => $game[0]->turns,
+        ], 200);
+
+    }
+
+    //move piece function -> gets piece and position
+
+    //functions for each piece movements. $canMoveThere -> true/false.
+
+    //function switch pawn when pawn reaches end of board
+
     //------------------------------------------------------------------------------------------------------------------------------------------
 }
