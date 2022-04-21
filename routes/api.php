@@ -125,6 +125,8 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
 
     Route::post('challenges/chess-move/{piece}/{position}', [ChessController::class, 'movePiece']);
 
+    Route::post('challenges/chess-end', [ChessController::class, 'endGame']);
+
 });
 
 /*Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
