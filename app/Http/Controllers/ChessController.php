@@ -332,13 +332,13 @@ class ChessController extends Controller
         if($direction == 'horizontal'){
 
             if($finalPosChar < $initialPosChar){
-                while($initialPosChar != $finalPosChar-1 && $isObstructed == false){ //don't wanna check if final position is obstructing
+                while($initialPosChar != chr(ord($finalPosChar)+1) && $isObstructed == false){ //don't wanna check if final position is obstructing
                     $initialPosChar = chr(ord($initialPosChar)-1);
                     $isOccupied = $this->isOccupied($blackPieces, $initialPosChar, $initialPosInt, $whitePieces);
                     $isObstructed = $isOccupied[0];
                 }
             }else{
-                while($initialPosChar != $finalPosChar-1 && $isObstructed == false){
+                while($initialPosChar != chr(ord($finalPosChar)-1) && $isObstructed == false){
                     $initialPosChar = chr(ord($initialPosChar)+1);
                     $isOccupied = $this->isOccupied($blackPieces, $initialPosChar, $initialPosInt, $whitePieces);
                     $isObstructed = $isOccupied[0];
@@ -347,7 +347,7 @@ class ChessController extends Controller
 
         }else if($direction == 'vertical'){
             if($finalPosInt < $initialPosInt){
-                while($initialPosInt != $finalPosInt-1 && $isObstructed == false){
+                while($initialPosInt != $finalPosInt+1 && $isObstructed == false){
                     $initialPosInt -= 1;
                     $isOccupied = $this->isOccupied($blackPieces, $initialPosChar, $initialPosInt, $whitePieces);
                     $isObstructed = $isOccupied[0];
