@@ -348,7 +348,7 @@ class ChessController extends Controller
 
                 $countChar = 0;
                 $countInt = 0;
-
+           
                 if($finalPosChar > $initialPosChar){
                     while($initialPosChar != $finalPosChar){
                         $countChar++;
@@ -362,11 +362,17 @@ class ChessController extends Controller
                 }
 
                 if($finalPosInt > $initialPosInt){
-                    $countInt++;
-                    $initialPosInt++; 
+                    while($initialPosInt != $finalPosInt){
+                        $countInt++;
+                        $initialPosInt += 1; 
+                    }
+                    
                 }else if($initialPosInt > $finalPosInt){
-                    $countInt++;
-                    $finalPosInt++;
+                    while($finalPosInt != $initialPosInt){
+                        $countInt++;
+                        $finalPosInt += 1;
+                    }
+                   
                 }
 
                 if($countChar == $countInt){
@@ -377,7 +383,8 @@ class ChessController extends Controller
                     }
                 }
         }
-
+        //error_log($countInt);
+        //error_log($countChar);
         return [$canMoveThere, $isOccupied];
 
     }
