@@ -175,16 +175,19 @@ class ChessController extends Controller
                 $canMovePiece = $this->canMovePawn($piece, $position, $whitePieces, $blackPieces, $turn);
                 break;
             case('knight'):
-                $canMovePiece = $this->canMoveKnight($piece, $position, $whitePieces, $blackPieces, $turn);
+                $canMovePiece = $this->canMoveKnight($piece, $position, $whitePieces, $blackPieces);
                 break;
             case('rook'):
-                $canMovePiece = $this->canMoveRook($piece, $position, $whitePieces, $blackPieces, $turn);
+                $canMovePiece = $this->canMoveRook($piece, $position, $whitePieces, $blackPieces);
                 break;
             case('bishop'):
-                $canMovePiece = $this->canMoveBishop($piece, $position, $whitePieces, $blackPieces, $turn);
+                $canMovePiece = $this->canMoveBishop($piece, $position, $whitePieces, $blackPieces);
                 break;
             case('queen'):
                 $canMovePiece = $this->canMoveQueen($piece, $position, $whitePieces, $blackPieces);
+                break;
+            case('king'):
+                $canMovePiece = $this->canMoveKing($piece, $position, $whitePieces, $blackPieces);
                 break;
             default: return response([
                 'message' => 'invalid piece'
@@ -266,7 +269,7 @@ class ChessController extends Controller
 
     }
 
-    function canMoveKnight($piece, $finalPosition, $whitePieces, $blackPieces, $turn){
+    function canMoveKnight($piece, $finalPosition, $whitePieces, $blackPieces){
 
         $canMoveThere = false;
 
@@ -297,7 +300,7 @@ class ChessController extends Controller
 
     }
 
-    function canMoveRook($piece, $finalPosition, $whitePieces, $blackPieces, $turn){
+    function canMoveRook($piece, $finalPosition, $whitePieces, $blackPieces){
         $canMoveThere = false;
         $isObstructed = false;
 
@@ -335,7 +338,7 @@ class ChessController extends Controller
         return [$canMoveThere, $isOccupied];
     }
 
-    function canMoveBishop($piece, $finalPosition, $whitePieces, $blackPieces, $turn){
+    function canMoveBishop($piece, $finalPosition, $whitePieces, $blackPieces){
 
         $canMoveThere = false;
 
@@ -474,6 +477,34 @@ class ChessController extends Controller
 
         return [$canMoveThere, $isOccupied];
 
+    }
+
+    function canMoveKing($piece, $finalPosition, $whitePieces, $blackPieces){
+        $canMoveThere = false;
+
+        $finalPosArray = str_split($finalPosition, 1);
+        $finalPosChar = $finalPosArray[0];
+        $finalPosInt = $finalPosArray[1];
+
+        $initialPosChar = $whitePieces[$piece][0];
+        $initialPosInt = $whitePieces[$piece][1];
+
+        $isOccupied = $this->isOccupied($blackPieces, $finalPosChar, $finalPosInt, $whitePieces);
+
+        if(!$isOccupied[0]){
+            if($finalPosChar == chr(ord($initialPosChar)+1) && $finalPosInt == $initialPosInt || //right
+            $finalPosChar == chr(ord($initialPosChar)-1) && $finalPosInt == $initialPosInt || //left
+            $finalPosChar == chr(ord($initialPosChar)+1) && $finalPosInt == $initialPosInt + 1 || //right-up
+            $finalPosChar == chr(ord($initialPosChar)-1) && $finalPosInt == $initialPosInt - 1 || //left-down
+            $finalPosChar == chr(ord($initialPosChar)+1) && $finalPosInt == $initialPosInt - 1 || //right-down
+            $finalPosChar == chr(ord($initialPosChar)-1) && $finalPosInt == $initialPosInt + 1 || //left-up
+            $finalPosInt == $initialPosInt + 1 && $finalPosChar == $initialPosChar || //up
+            $finalPosInt == $initialPosInt - 1 && $finalPosChar == $initialPosChar){ //down
+                $canMoveThere = true;
+            }
+        }
+
+        return [$canMoveThere, $isOccupied];
 
     }
 
