@@ -224,6 +224,7 @@ class ChessController extends Controller
         }
 
         //machine move before updating tables!!
+        $this->npcMove($whitePieces, $blackPieces);
 
         return response([
             'white_pieces' => $whitePieces,
@@ -670,10 +671,100 @@ class ChessController extends Controller
         ], 200);
     }
 
+     /*
+    NPC MOVEMENT
+        receive black and white pieces positions
+        check open spot around white king
+        if open spot then check if any piece can get there
+        if not open or no piece can get there check if any piece is at risk
+        if not at risk check if can take any white piece following priorities (queen, bishop, rook, knight, pawn)
+    */
 
-    //npc movement
+    function npcMove($whitePieces, $blackPieces){
+        
+        //error_log($whitePieces['king'][0]);
+        //error_log($whitePieces['king'][1]);
 
- 
+        //find empty spaces around possible target piece
+        $possibleTargets = $this->checkSurroundings('king', $whitePieces, $blackPieces);
+
+        print_r($possibleTargets);
+
+        //check if there is a piece that can hit that target
+        
+    }
+
+    function checkSurroundings($piece, $whitePieces, $blackPieces){
+
+        $pieceSurrounding = [];
+        $possibleTargets = [];
+
+        $piecePosChar = $whitePieces[$piece][0];
+        $piecePosInt = $whitePieces[$piece][1];
+
+        if($piecePosChar != 'H' && $piecePosChar != 'A' && $piecePosInt != 8 && $piecePosInt != 1){
+            $pieceSurrounding = [
+                'right' => [chr(ord($piecePosChar)+1), $piecePosInt],
+                'left' => [chr(ord($piecePosChar)-1), $piecePosInt],
+                'up' => [$piecePosChar, $piecePosInt +1],
+                'down' => [$piecePosChar, $piecePosInt -1],
+                'right-up' => [chr(ord($piecePosChar)+1), $piecePosInt + 1],
+                'right-down' => [chr(ord($piecePosChar)+1), $piecePosInt - 1],
+                'left-up' => [chr(ord($piecePosChar)-1), $piecePosInt + 1],
+                'left-down' => [chr(ord($piecePosChar)-1), $piecePosInt - 1],
+            ];
+        }else if($piecePosChar == 'H' && $piecePosInt != 1 || $piecePosChar == 'H' && $piecePosInt != 8){
+            $pieceSurrounding = [
+                'left' => [chr(ord($piecePosChar)-1), $piecePosInt],
+                'up' => [$piecePosChar, $piecePosInt +1],
+                'down' => [$piecePosChar, $piecePosInt -1],
+                'left-up' => [chr(ord($piecePosChar)-1), $piecePosInt + 1],
+                'left-down' => [chr(ord($piecePosChar)-1), $piecePosInt - 1],
+            ];
+        }else if($piecePosChar == 'H' && $piecePosInt == 1){
+            $pieceSurrounding = [
+                'left' => [chr(ord($piecePosChar)-1), $piecePosInt],
+                'up' => [$piecePosChar, $piecePosInt +1],
+                'left-up' => [chr(ord($piecePosChar)-1), $piecePosInt + 1],
+            ];
+        }else if($piecePosChar == 'H' && $piecePosInt == 8){
+            $pieceSurrounding = [
+                'left' => [chr(ord($piecePosChar)-1), $piecePosInt],
+                'down' => [$piecePosChar, $piecePosInt -1],
+                'left-down' => [chr(ord($piecePosChar)-1), $piecePosInt - 1],
+            ];
+        }else if($piecePosChar == 'A' && $piecePosInt != 1 || $piecePosChar == 'A' && $piecePosInt != 8){
+            $pieceSurrounding = [
+                'right' => [chr(ord($piecePosChar)+1), $piecePosInt],
+                'up' => [$piecePosChar, $piecePosInt +1],
+                'down' => [$piecePosChar, $piecePosInt -1],
+                'right-up' => [chr(ord($piecePosChar)+1), $piecePosInt + 1],
+                'right-down' => [chr(ord($piecePosChar)+1), $piecePosInt - 1],
+            ];
+        }else if($piecePosChar == 'A' && $piecePosInt == 1){
+            $pieceSurrounding = [
+                'right' => [chr(ord($piecePosChar)+1), $piecePosInt],
+                'up' => [$piecePosChar, $piecePosInt +1],
+                'right-up' => [chr(ord($piecePosChar)+1), $piecePosInt + 1],
+            ];
+        }else if($piecePosChar == 'A' && $piecePosInt == 8){
+            $pieceSurrounding = [
+                'right' => [chr(ord($piecePosChar)+1), $piecePosInt],
+                'down' => [$piecePosChar, $piecePosInt -1],
+                'right-down' => [chr(ord($piecePosChar)+1), $piecePosInt - 1],
+            ];
+        }
+  
+        foreach($pieceSurrounding as $key=>$position){
+            $isOccupied = $this->isOccupied($blackPieces, $position[0], $position[1], $whitePieces);
+            if(!$isOccupied[0]){
+                array_push($possibleTargets, $position);
+            }
+        }
+
+        return $possibleTargets;
+
+    }
 
     //function switch pawn when pawn reaches end of board
 
