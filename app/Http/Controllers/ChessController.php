@@ -685,14 +685,85 @@ class ChessController extends Controller
         //error_log($whitePieces['king'][0]);
         //error_log($whitePieces['king'][1]);
 
-        //find empty spaces around possible target piece
+        $checkNext = true;
+        $canMovePiece = [];
+
+        //find open spaces around target piece
         $possibleTargets = $this->checkSurroundings('king', $whitePieces, $blackPieces);
 
-        print_r($possibleTargets);
+        if($possibleTargets){
+            //print_r($possibleTargets);
+            foreach($possibleTargets as $key=>$position){
+                //if diagonal opening check if bishop or queen can move
+                if(($position[0] == chr(ord($whitePieces['king'][0]) + 1)) && ($position[1] == $whitePieces['king'][1] + 1) ||
+                   ($position[0] == chr(ord($whitePieces['king'][0]) - 1)) && ($position[1] == $whitePieces['king'][1] + 1) ||
+                   ($position[0] == chr(ord($whitePieces['king'][0]) + 1)) && ($position[1] == $whitePieces['king'][1] - 1) ||
+                   ($position[0] == chr(ord($whitePieces['king'][0]) - 1)) && ($position[1] == $whitePieces['king'][1] - 1)){
 
-        //check if there is a piece that can hit that target
+                    $target = $whitePieces['king'][0] . $whitePieces['king'][1];
+
+                    $pieces = ['bishop1', 'bishop2', 'queen'];
+
+                    foreach($pieces as $piece){
+
+                        if($piece == 'queen'){
+                            $p = $piece;
+                        }else{
+                            $p = substr_replace($piece, "", -1);
+                        }
+
+                        if($checkNext == true){
+                            switch($p){
+                                case('bishop'):
+                                    if(array_key_exists($piece, $blackPieces)){
+                                        $canMovePiece = $this->canMoveBishop($piece, $target, $blackPieces, $whitePieces);
+                                    }
+                                    break;
+                                case('queen'):
+                                    if(array_key_exists($piece, $blackPieces)){
+                                        $canMovePiece = $this->canMoveQueen($piece, $target, $blackPieces, $whitePieces);
+                                    }
+                                    break;
+                            }
+                        }
+
+                        if($canMovePiece[0]){
+
+                            //checkCondition!!!!!!
+    
+                            $checkNext = false;
+    
+                            $whitePieces = $this->removeFromPieces($target, $whitePieces);
+                   
+                            $blackPieces = $this->changePiecePosition($target, $blackPieces, 'bishop1');
+    
+                            break 2;
+                        }
+                    }
+                    
+                }
+            }
+        }
+
+        print_r([$whitePieces, $blackPieces]);
+
+        //return [$whitePieces, $blackPieces];
+
+       
+
+        /*check if there is a piece that can hit that target
+            loop through possible targets 
+                if target position is in diagonal->check if queen or bishop can hit (canMove...?)
+                if target position is not diagonal->check other pieces
+                    if can move on king -> 'check' condition. -> return piece and allow user to move another piece (possible infinite loop. how to get out?)
+        
+        */
+
+
         
     }
+
+    //function checkCondition(){}
 
     function checkSurroundings($piece, $whitePieces, $blackPieces){
 
@@ -713,7 +784,7 @@ class ChessController extends Controller
                 'left-up' => [chr(ord($piecePosChar)-1), $piecePosInt + 1],
                 'left-down' => [chr(ord($piecePosChar)-1), $piecePosInt - 1],
             ];
-        }else if($piecePosChar == 'H' && $piecePosInt != 1 || $piecePosChar == 'H' && $piecePosInt != 8){
+        }else if(($piecePosChar == 'H' && $piecePosInt != 1) && ($piecePosChar == 'H' && $piecePosInt != 8)){
             $pieceSurrounding = [
                 'left' => [chr(ord($piecePosChar)-1), $piecePosInt],
                 'up' => [$piecePosChar, $piecePosInt +1],
@@ -733,7 +804,7 @@ class ChessController extends Controller
                 'down' => [$piecePosChar, $piecePosInt -1],
                 'left-down' => [chr(ord($piecePosChar)-1), $piecePosInt - 1],
             ];
-        }else if($piecePosChar == 'A' && $piecePosInt != 1 || $piecePosChar == 'A' && $piecePosInt != 8){
+        }else if(($piecePosChar == 'A' && $piecePosInt != 1) && ($piecePosChar == 'A' && $piecePosInt != 8)){
             $pieceSurrounding = [
                 'right' => [chr(ord($piecePosChar)+1), $piecePosInt],
                 'up' => [$piecePosChar, $piecePosInt +1],
@@ -752,6 +823,22 @@ class ChessController extends Controller
                 'right' => [chr(ord($piecePosChar)+1), $piecePosInt],
                 'down' => [$piecePosChar, $piecePosInt -1],
                 'right-down' => [chr(ord($piecePosChar)+1), $piecePosInt - 1],
+            ];
+        }else if($piecePosChar != 'A' && $piecePosChar != 'H' && $piecePosInt == 1){
+            $pieceSurrounding = [
+                'right' => [chr(ord($piecePosChar)+1), $piecePosInt],
+                'left' => [chr(ord($piecePosChar)-1), $piecePosInt],
+                'up' => [$piecePosChar, $piecePosInt +1],
+                'right-up' => [chr(ord($piecePosChar)+1), $piecePosInt + 1],
+                'left-up' => [chr(ord($piecePosChar)-1), $piecePosInt + 1]
+            ];
+        }else if($piecePosChar != 'A' && $piecePosChar != 'H' && $piecePosInt == 8){
+            $pieceSurrounding = [
+                'right' => [chr(ord($piecePosChar)+1), $piecePosInt],
+                'left' => [chr(ord($piecePosChar)-1), $piecePosInt],
+                'down' => [$piecePosChar, $piecePosInt -1],
+                'right-down' => [chr(ord($piecePosChar)+1), $piecePosInt - 1],
+                'left-down' => [chr(ord($piecePosChar)-1), $piecePosInt - 1]
             ];
         }
   
