@@ -171,23 +171,34 @@ class ChessController extends Controller
         
         switch($p){
             case('pawn'): 
-                //check if user still has this specific pawn!!
-                $canMovePiece = $this->canMovePawn($piece, $position, $whitePieces, $blackPieces, $turn, 'white');
+                if(array_key_exists($piece, $whitePieces)){
+                    $canMovePiece = $this->canMovePawn($piece, $position, $whitePieces, $blackPieces, $turn, 'white');
+                }
                 break;
             case('knight'):
-                $canMovePiece = $this->canMoveKnight($piece, $position, $whitePieces, $blackPieces, 'white');
+                if(array_key_exists($piece, $whitePieces)){
+                    $canMovePiece = $this->canMoveKnight($piece, $position, $whitePieces, $blackPieces, 'white');
+                }
                 break;
             case('rook'):
-                $canMovePiece = $this->canMoveRook($piece, $position, $whitePieces, $blackPieces, 'white');
+                if(array_key_exists($piece, $whitePieces)){
+                    $canMovePiece = $this->canMoveRook($piece, $position, $whitePieces, $blackPieces, 'white');
+                }
                 break;
             case('bishop'):
-                $canMovePiece = $this->canMoveBishop($piece, $position, $whitePieces, $blackPieces, 'white');
+                if(array_key_exists($piece, $whitePieces)){
+                    $canMovePiece = $this->canMoveBishop($piece, $position, $whitePieces, $blackPieces, 'white');
+                }
                 break;
             case('queen'):
-                $canMovePiece = $this->canMoveQueen($piece, $position, $whitePieces, $blackPieces, 'white');
+                if(array_key_exists($piece, $whitePieces)){
+                    $canMovePiece = $this->canMoveQueen($piece, $position, $whitePieces, $blackPieces, 'white');
+                }
                 break;
             case('king'):
-                $canMovePiece = $this->canMoveKing($piece, $position, $whitePieces, $blackPieces, 'white');
+                if(array_key_exists($piece, $whitePieces)){ 
+                    $canMovePiece = $this->canMoveKing($piece, $position, $whitePieces, $blackPieces, 'white');
+                }
                 break;
             default: return response([
                 'message' => 'invalid piece'
@@ -203,18 +214,18 @@ class ChessController extends Controller
             if($canMovePiece[1][0] && $canMovePiece[1][1] != 'white'){ //is occupied by black piece
                 
                 $blackPieces = $this->removeFromPieces($position, $blackPieces);
-                $bp = serialize($blackPieces);
+                //$bp = serialize($blackPieces);
 
                 $whitePieces = $this->changePiecePosition($position, $whitePieces, $piece);
-                $wp = serialize($whitePieces);
+                //$wp = serialize($whitePieces);
 
-                $gameUpdate = ChessGame::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)->where('status', '=', 'ongoing')->update(['white_pieces' => $wp, 'black_pieces' => $bp, 'turns' => 1]);
+                //$gameUpdate = ChessGame::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)->where('status', '=', 'ongoing')->update(['white_pieces' => $wp, 'black_pieces' => $bp, 'turns' => 1]);
 
             }else if(!$canMovePiece[1][0]){ //not occupied
                 $whitePieces = $this->changePiecePosition($position, $whitePieces, $piece);
-                $wp = serialize($whitePieces);
+                //$wp = serialize($whitePieces);
 
-                $gameUpdate = ChessGame::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)->where('status', '=', 'ongoing')->update(['white_pieces' => $wp, 'turns' => 1]);
+                //$gameUpdate = ChessGame::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)->where('status', '=', 'ongoing')->update(['white_pieces' => $wp, 'turns' => 1]);
             
             }else{ //is occupied by white piece
                 return response([
@@ -224,12 +235,18 @@ class ChessController extends Controller
         }
 
         //machine move before updating tables!!
-        $this->npcMove($whitePieces, $blackPieces);
+        $endTurn = $this->npcMove($whitePieces, $blackPieces);
+        $wp = serialize($endTurn[0]);
+        $bp = serialize($endTurn[1]);
+        $turn = $game[0]->turns+2;
+
+        $gameUpdate = ChessGame::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)->where('status', '=', 'ongoing')->update(['white_pieces' => $wp, 'black_pieces' => $bp, 'turns' => $turn]);
+
 
         return response([
-            'white_pieces' => $whitePieces,
-            'black_pieces' => $blackPieces,
-            'turns' => $game[0]->turns+1,
+            'white_pieces' => $endTurn[0],
+            'black_pieces' => $endTurn[1],
+            'turns' => $turn,
         ], 200);
 
     }
@@ -737,7 +754,11 @@ class ChessController extends Controller
             }
         }
 
-        $blackPieces = $this->npcRandomMovement($priorityMoveList, $blackPieces, $whitePieces);
+        if(!$result[2]){
+            $blackPieces = $this->npcRandomMovement($priorityMoveList, $blackPieces, $whitePieces);
+        }
+
+        
 
 
 
@@ -821,9 +842,9 @@ class ChessController extends Controller
         //end:
 
         //print_r([$result[0], $result[1]]);
-        print_r([$whitePieces, $blackPieces]);
+        //print_r([$whitePieces, $blackPieces]);
 
-        //return [$whitePieces, $blackPieces];
+        return [$whitePieces, $blackPieces];
 
         /*check if there is a piece that can hit that target
             loop through possible targets 
@@ -941,6 +962,24 @@ class ChessController extends Controller
                         shuffle($movementMap);
                         foreach($movementMap as $target){
                             $canMovePiece = $this->canMoveBishop($piece, $target, $blackPieces, $whitePieces, 'black');
+                            if($canMovePiece[0]){
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                case('queen'):
+                    if(array_key_exists($piece, $blackPieces)){
+                        $numbers = [1, 2, 3, 4, 5, 6, 7, 8];
+                        $letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+                        foreach($letters as $k=>$letter){
+                            foreach($numbers as $j=>$number){
+                                array_push($movementMap, $letter . $number);
+                            }
+                        }
+                        shuffle($movementMap);
+                        foreach($movementMap as $target){
+                            $canMovePiece = $this->canMoveQueen($piece, $target, $blackPieces, $whitePieces, 'black');
                             if($canMovePiece[0]){
                                 break;
                             }
