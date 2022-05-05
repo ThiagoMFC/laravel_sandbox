@@ -725,12 +725,19 @@ class ChessController extends Controller
         foreach($priorityAttackList as $priority){
             $target = $whitePieces[$priority][0] . $whitePieces[$priority][1];
             
-                $result = $this->npcPieceMovement($priorityMoveList, $blackPieces, $whitePieces, $target);
-                    if($result[2]){
-                        goto end;
-                    }
-            
+            $result = $this->npcPieceMovement($priorityMoveList, $blackPieces, $whitePieces, $target);
+
+            if($result[2]){
+
+                $whitePieces = $result[0];
+                $blackPieces = $result[1];
+
+                break;
+                //goto end;
+            }
         }
+
+        $blackPieces = $this->npcRandomMovement($priorityMoveList, $blackPieces, $whitePieces);
 
 
 
@@ -811,13 +818,12 @@ class ChessController extends Controller
             }
         }*/
 
-        end:
+        //end:
 
-        print_r([$result[0], $result[1]]);
+        //print_r([$result[0], $result[1]]);
+        print_r([$whitePieces, $blackPieces]);
 
         //return [$whitePieces, $blackPieces];
-
-       
 
         /*check if there is a piece that can hit that target
             loop through possible targets 
@@ -827,8 +833,147 @@ class ChessController extends Controller
         
         */
 
+    }
 
+    function npcRandomMovement($piecesToMove, $blackPieces, $whitePieces){
+
+        $repeat = true;
+        $target = "";
+        $movementMap = [];
         
+        while($repeat){
+
+            //select a random piece from $piecesToMove
+            $piece = array_rand(array_flip($piecesToMove), 1);
+            //$piece = 'knight2';
+            //get its position from $blackPieces
+            $positionChar = $blackPieces[$piece][0];
+            $positionInt = $blackPieces[$piece][1];
+
+            if($piece == 'queen' || $piece == 'king'){
+                $p = $piece;
+            }else{
+                $p = substr_replace($piece, "", -1);
+            }
+
+            switch($p){
+                case('pawn'):
+                    if(array_key_exists($piece, $blackPieces)){
+                        $target = $positionChar . $positionInt-1;
+                        $canMovePiece = $this->canMovePawn($piece, $target, $blackPieces, $whitePieces, 1, 'black');
+                    }
+                    break;
+                case('king'):
+                    if(array_key_exists($piece, $blackPieces)){
+                        $movementMap = [
+                            chr(ord($positionChar)+1) . $positionInt,
+                            chr(ord($positionChar)-1) . $positionInt,
+                            $positionChar . $positionInt + 1,
+                            $positionChar . $positionInt - 1,
+                            chr(ord($positionChar)+1) . $positionInt + 1,
+                            chr(ord($positionChar)+1) . $positionInt - 1,
+                            chr(ord($positionChar)-1) . $positionInt + 1,
+                            chr(ord($positionChar)-1) . $positionInt - 1
+                        ];
+                        shuffle($movementMap);
+                        foreach($movementMap as $target){
+                            $canMovePiece = $this->canMoveKing($piece, $target, $blackPieces, $whitePieces, 'black');
+                            if($canMovePiece[0]){
+                                break;
+                            }
+                        }
+                        
+                    }
+                    break;
+                case('knight'):
+                    if(array_key_exists($piece, $blackPieces)){
+                        $movementMap = [
+                            chr(ord($positionChar)+1) . $positionInt + 2,
+                            chr(ord($positionChar)-1) . $positionInt + 2,
+                            chr(ord($positionChar)+1) . $positionInt - 2,
+                            chr(ord($positionChar)-1) . $positionInt - 2,
+                            chr(ord($positionChar)+2) . $positionInt + 1,
+                            chr(ord($positionChar)-2) . $positionInt + 1,
+                            chr(ord($positionChar)+2) . $positionInt - 1, 
+                            chr(ord($positionChar)-2) . $positionInt - 1
+                        ];
+                        shuffle($movementMap);
+                        foreach($movementMap as $target){
+                            $canMovePiece = $this->canMoveKnight($piece, $target, $blackPieces, $whitePieces, 'black');
+                            if($canMovePiece[0]){
+                                break;
+                            }
+                        }
+                        
+                    }
+                    break;
+                case('rook'):
+                    if(array_key_exists($piece, $blackPieces)){
+                        for($i = 1; $i < 9; $i++){
+                            array_push($movementMap, $positionChar . $i);
+                        }
+                        $letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+                        foreach($letters as $letter){
+                            array_push($movementMap, $letter . $positionInt);
+                        }
+                        shuffle($movementMap);
+                        foreach($movementMap as $target){
+                            $canMovePiece = $this->canMoveRook($piece, $target, $blackPieces, $whitePieces, 'black');
+                            if($canMovePiece[0]){
+                                break;
+                            }
+                        } 
+                    }
+                    break;
+                case('bishop'):
+                    if(arry_key_exists($piece, $blackPieces)){
+                        $numbers = [1, 2, 3, 4, 5, 6, 7, 8];
+                        $letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+                        foreach($letters as $k=>$letter){
+                            foreach($numbers as $j=>$number){
+                                if($k % 2 === 0 && $j % 2 !== 0){
+                                    array_push($movementMap, $letter . $number);
+                                }else if($k % 2 !== 0 && $j % 2 === 0){
+                                    array_push($movementMap, $letter . $number);
+                                }
+                            }
+                        }
+                        shuffle($movementMap);
+                        foreach($movementMap as $target){
+                            $canMovePiece = $this->canMoveBishop($piece, $target, $blackPieces, $whitePieces, 'black');
+                            if($canMovePiece[0]){
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                
+            }
+
+            if($canMovePiece[0]){
+
+                $repeat = false;
+       
+                $blackPieces = $this->changePiecePosition($target, $blackPieces, $piece);
+
+                break ;
+            }
+
+            if (($key = array_search($piece, $piecesToMove)) !== false) {
+                unset($piecesToMove[$key]);
+            }
+
+
+            /*choose a random position within range for it to move to
+            check if can move
+                move it
+                choose next
+            return new $blackPieces
+            */
+        }
+        
+        return $blackPieces;
+
     }
 
     function npcPieceMovement($pieces, $blackPieces, $whitePieces, $target){
@@ -889,7 +1034,7 @@ class ChessController extends Controller
 
                 $whitePieces = $this->removeFromPieces($target, $whitePieces);
        
-                $blackPieces = $this->changePiecePosition($target, $blackPieces, $piece);//bishop1???
+                $blackPieces = $this->changePiecePosition($target, $blackPieces, $piece);
 
                 break ;
             }
