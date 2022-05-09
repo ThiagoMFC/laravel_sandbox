@@ -177,6 +177,7 @@ class ChessController extends Controller
                 break;
             case('knight'):
                 if(array_key_exists($piece, $whitePieces)){
+                    //error_log('got here');
                     $canMovePiece = $this->canMoveKnight($piece, $position, $whitePieces, $blackPieces, 'white');
                 }
                 break;
@@ -251,7 +252,7 @@ class ChessController extends Controller
 
     }
 
-    function canMovePawn($piece, $finalPosition, $whitePieces, $blackPieces, $turn, $targetColor){
+    function canMovePawn($piece, $finalPosition, $activeSet, $waitingSet, $turn, $targetColor){
 
         $canMoveThere = false;
 
@@ -259,10 +260,10 @@ class ChessController extends Controller
         $finalPosChar = $finalPosArray[0];
         $finalPosInt = $finalPosArray[1];
 
-        $isOccupied = $this->isOccupied($blackPieces, $finalPosChar, $finalPosInt, $whitePieces, $targetColor);
+        $isOccupied = $this->isOccupied($waitingSet, $finalPosChar, $finalPosInt, $activeSet, $targetColor);
 
-        $initialPosChar = $whitePieces[$piece][0];
-        $initialPosInt = $whitePieces[$piece][1];
+        $initialPosChar = $activeSet[$piece][0];
+        $initialPosInt = $activeSet[$piece][1];
         
 
         if($turn == 0){
@@ -277,7 +278,6 @@ class ChessController extends Controller
                         $canMoveThere = true;
                     }
                 }else{
-                    
                     if(($finalPosChar == chr(ord($initialPosChar)+1) && $finalPosInt == $initialPosInt - 1) || ($finalPosChar == chr(ord($initialPosChar)-1) && $finalPosInt == $initialPosInt - 1)){
                         $canMoveThere = true;
                     }
@@ -301,12 +301,16 @@ class ChessController extends Controller
             }
         }
 
+        if($finalPosChar > 'H' || $finalPosChar < 'A' || $finalPosInt > 8 || $finalPosInt < 1){
+            $canMoveThere = false;
+        }
+
         return [$canMoveThere, $isOccupied];
         //return $canMovePiece;
 
     }
 
-    function canMoveKnight($piece, $finalPosition, $whitePieces, $blackPieces, $targetColor){
+    function canMoveKnight($piece, $finalPosition, $activeSet, $waitingSet, $targetColor){
 
         $canMoveThere = false;
 
@@ -314,10 +318,12 @@ class ChessController extends Controller
         $finalPosChar = $finalPosArray[0];
         $finalPosInt = $finalPosArray[1];
 
-        $isOccupied = $this->isOccupied($blackPieces, $finalPosChar, $finalPosInt, $whitePieces, $targetColor);
+        
 
-        $initialPosChar = $whitePieces[$piece][0];
-        $initialPosInt = $whitePieces[$piece][1];
+        $isOccupied = $this->isOccupied($waitingSet, $finalPosChar, $finalPosInt, $activeSet, $targetColor);
+
+        $initialPosChar = $activeSet[$piece][0];
+        $initialPosInt = $activeSet[$piece][1];
 
         //movements (long L forward+right, forward+left, backwards+right, backwards+left / short L forward+right, forward+left, backwards+right, backwards+left)
 
@@ -330,14 +336,18 @@ class ChessController extends Controller
            ($finalPosChar == chr(ord($initialPosChar)+2) && $finalPosInt == $initialPosInt - 1) || 
            ($finalPosChar == chr(ord($initialPosChar)-2) && $finalPosInt == $initialPosInt - 1)){
                 $canMoveThere = true;
-           }
+        }
+
+        if($finalPosChar > 'H' || $finalPosChar < 'A' || $finalPosInt > 8 || $finalPosInt < 1){
+            $canMoveThere = false;
+        }
 
         return [$canMoveThere, $isOccupied];
         //return $canMovePiece;
 
     }
 
-    function canMoveRook($piece, $finalPosition, $whitePieces, $blackPieces, $targetColor){
+    function canMoveRook($piece, $finalPosition, $activeSet, $waitingSet, $targetColor){
         $canMoveThere = false;
         $isObstructed = false;
 
@@ -345,24 +355,28 @@ class ChessController extends Controller
         $finalPosChar = $finalPosArray[0];
         $finalPosInt = $finalPosArray[1];
 
-        $isOccupied = $this->isOccupied($blackPieces, $finalPosChar, $finalPosInt, $whitePieces, $targetColor);
+        //error_log('canMoveRook to '. $finalPosChar.$finalPosInt);
 
-        $initialPosChar = $whitePieces[$piece][0];
-        $initialPosInt = $whitePieces[$piece][1];
+        $isOccupied = $this->isOccupied($waitingSet, $finalPosChar, $finalPosInt, $activeSet, $targetColor);
 
-        if($finalPosChar == $initialPosChar){
+        //error_log('isOccupied '. $isOccupied[0].$isOccupied[1]);
+
+        $initialPosChar = $activeSet[$piece][0];
+        $initialPosInt = $activeSet[$piece][1];
+
+        if($finalPosChar == $initialPosChar && $finalPosInt != $initialPosInt){
             //vertical movement
-            $isObstructed = $this->isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, 'vertical', $whitePieces, $blackPieces, $targetColor);
-
+            $isObstructed = $this->isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, 'vertical', $activeSet, $waitingSet, $targetColor);
+            //error_log('isObstructed '.$isObstructed);
             if(!$isObstructed && $isOccupied[1] != $targetColor){
                 $canMoveThere = true;
             }else if(!$isObstructed && !$isOccupied[0]){
                 $canMoveThere = true;
             }
 
-        }else if($finalPosInt == $initialPosInt){
+        }else if($finalPosInt == $initialPosInt && $finalPosChar != $initialPosChar){
             //horizontal movement
-            $isObstructed = $this->isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, 'horizontal', $whitePieces, $blackPieces, $targetColor);
+            $isObstructed = $this->isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, 'horizontal', $activeSet, $waitingSet, $targetColor);
 
             if(!$isObstructed && $isOccupied[1] != $targetColor){
                 $canMoveThere = true;
@@ -372,10 +386,14 @@ class ChessController extends Controller
 
         }
 
+        if($finalPosChar > 'H' || $finalPosChar < 'A' || $finalPosInt > 8 || $finalPosInt < 1){
+            $canMoveThere = false;
+        }
+
         return [$canMoveThere, $isOccupied];
     }
 
-    function canMoveBishop($piece, $finalPosition, $whitePieces, $blackPieces, $targetColor){
+    function canMoveBishop($piece, $finalPosition, $activeSet, $waitingSet, $targetColor){
 
         $canMoveThere = false;
 
@@ -383,11 +401,11 @@ class ChessController extends Controller
         $finalPosChar = $finalPosArray[0];
         $finalPosInt = $finalPosArray[1];
 
-        $initialPosChar = $whitePieces[$piece][0];
-        $initialPosInt = $whitePieces[$piece][1];
+        $initialPosChar = $activeSet[$piece][0];
+        $initialPosInt = $activeSet[$piece][1];
 
-        $isOccupied = $this->isOccupied($blackPieces, $finalPosChar, $finalPosInt, $whitePieces, $targetColor);
-        $isObstructed = $this->isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, 'diagonal', $whitePieces, $blackPieces, $targetColor);
+        $isOccupied = $this->isOccupied($waitingSet, $finalPosChar, $finalPosInt, $activeSet, $targetColor);
+        $isObstructed = $this->isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, 'diagonal', $activeSet, $waitingSet, $targetColor);
 
 
         if(($finalPosChar > $initialPosChar && $finalPosInt > $initialPosInt) ||
@@ -434,27 +452,31 @@ class ChessController extends Controller
         }
         //error_log($countInt);
         //error_log($countChar);
+
+        if($finalPosChar > 'H' || $finalPosChar < 'A' || $finalPosInt > 8 || $finalPosInt < 1){
+            $canMoveThere = false;
+        }
         return [$canMoveThere, $isOccupied];
 
     }
 
-    function canMoveQueen($piece, $finalPosition, $whitePieces, $blackPieces, $targetColor){
+    function canMoveQueen($piece, $finalPosition, $activeSet, $waitingSet, $targetColor){
         $canMoveThere = false;
 
         $finalPosArray = str_split($finalPosition, 1);
         $finalPosChar = $finalPosArray[0];
         $finalPosInt = $finalPosArray[1];
 
-        $initialPosChar = $whitePieces[$piece][0];
-        $initialPosInt = $whitePieces[$piece][1];
+        $initialPosChar = $activeSet[$piece][0];
+        $initialPosInt = $activeSet[$piece][1];
 
-        $isOccupied = $this->isOccupied($blackPieces, $finalPosChar, $finalPosInt, $whitePieces, $targetColor);
+        $isOccupied = $this->isOccupied($waitingSet, $finalPosChar, $finalPosInt, $activeSet, $targetColor);
 
         if($finalPosChar == $initialPosChar){
             //vertical movement
-            $isObstructed = $this->isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, 'vertical', $whitePieces, $blackPieces, $targetColor);
+            $isObstructed = $this->isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, 'vertical', $activeSet, $waitingSet, $targetColor);
 
-            if(!$isObstructed && $isOccupied[1][1] != $targetColor){
+            if(!$isObstructed && $isOccupied[1] != $targetColor){
                 $canMoveThere = true;
             }else if(!$isObstructed && !$isOccupied[0]){
                 $canMoveThere = true;
@@ -462,9 +484,9 @@ class ChessController extends Controller
 
         }else if($finalPosInt == $initialPosInt){
             //horizontal movement
-            $isObstructed = $this->isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, 'horizontal', $whitePieces, $blackPieces, $targetColor);
+            $isObstructed = $this->isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, 'horizontal', $activeSet, $waitingSet, $targetColor);
 
-            if(!$isObstructed && $isOccupied[1][1] != $targetColor){
+            if(!$isObstructed && $isOccupied[1] != $targetColor){
                 $canMoveThere = true;
             }else if(!$isObstructed && !$isOccupied[0]){
                 $canMoveThere = true;
@@ -472,7 +494,7 @@ class ChessController extends Controller
 
         }else {
 
-            $isObstructed = $this->isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, 'diagonal', $whitePieces, $blackPieces, $targetColor);
+            $isObstructed = $this->isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, 'diagonal', $activeSet, $waitingSet, $targetColor);
 
              $countChar = 0;
              $countInt = 0;
@@ -512,23 +534,31 @@ class ChessController extends Controller
              }
         }
 
+        if($finalPosChar > 'H' || $finalPosChar < 'A' || $finalPosInt > 8 || $finalPosInt < 1){
+            $canMoveThere = false;
+        }
+
         return [$canMoveThere, $isOccupied];
 
     }
 
-    function canMoveKing($piece, $finalPosition, $whitePieces, $blackPieces, $targetColor){
+    function canMoveKing($piece, $finalPosition, $activeSet, $waitingSet, $targetColor){
         $canMoveThere = false;
 
         $finalPosArray = str_split($finalPosition, 1);
         $finalPosChar = $finalPosArray[0];
         $finalPosInt = $finalPosArray[1];
 
-        $initialPosChar = $whitePieces[$piece][0];
-        $initialPosInt = $whitePieces[$piece][1];
+        $initialPosChar = $activeSet[$piece][0];
+        $initialPosInt = $activeSet[$piece][1];
 
-        $isOccupied = $this->isOccupied($blackPieces, $finalPosChar, $finalPosInt, $whitePieces, $targetColor);
+        $isOccupied = $this->isOccupied($waitingSet, $finalPosChar, $finalPosInt, $activeSet, $targetColor);
 
-        if(!$isOccupied[0] || $isOccupied[1][1] != $targetColor){
+        if(!$isOccupied[0] || $isOccupied[1] != $targetColor){
+
+            //error_log($isOccupied[0]);
+            //error_log($isOccupied[1]);
+
             if($finalPosChar == chr(ord($initialPosChar)+1) && $finalPosInt == $initialPosInt || //right
             $finalPosChar == chr(ord($initialPosChar)-1) && $finalPosInt == $initialPosInt || //left
             $finalPosChar == chr(ord($initialPosChar)+1) && $finalPosInt == $initialPosInt + 1 || //right-up
@@ -541,28 +571,33 @@ class ChessController extends Controller
             }
         }
 
+        if($finalPosChar > 'H' || $finalPosChar < 'A' || $finalPosInt > 8 || $finalPosInt < 1){
+            $canMoveThere = false;
+        }
+
         return [$canMoveThere, $isOccupied];
 
     }
 
-    function isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, $direction, $whitePieces, $blackPieces, $targetColor){
+    function isObstructed($initialPosChar, $initialPosInt, $finalPosChar, $finalPosInt, $direction, $activeSet, $waitingSet, $targetColor){
         
         $isObstructed = false;
         $isOccupied = [];
 
+        //error_log('isObstructed ' . $finalPosChar.$finalPosInt);
 
         if($direction == 'horizontal'){
 
             if($finalPosChar < $initialPosChar){
                 while($initialPosChar != chr(ord($finalPosChar)+1) && $isObstructed == false){ //don't wanna check if final position is obstructed
                     $initialPosChar = chr(ord($initialPosChar)-1);
-                    $isOccupied = $this->isOccupied($blackPieces, $initialPosChar, $initialPosInt, $whitePieces, $targetColor);
+                    $isOccupied = $this->isOccupied($waitingSet, $initialPosChar, $initialPosInt, $activeSet, $targetColor);
                     $isObstructed = $isOccupied[0];
                 }
             }else{
                 while($initialPosChar != chr(ord($finalPosChar)-1) && $isObstructed == false){
                     $initialPosChar = chr(ord($initialPosChar)+1);
-                    $isOccupied = $this->isOccupied($blackPieces, $initialPosChar, $initialPosInt, $whitePieces, $targetColor);
+                    $isOccupied = $this->isOccupied($waitingSet, $initialPosChar, $initialPosInt, $activeSet, $targetColor);
                     $isObstructed = $isOccupied[0];
                 }
             }
@@ -571,13 +606,13 @@ class ChessController extends Controller
             if($finalPosInt < $initialPosInt){
                 while($initialPosInt != $finalPosInt+1 && $isObstructed == false){
                     $initialPosInt -= 1;
-                    $isOccupied = $this->isOccupied($blackPieces, $initialPosChar, $initialPosInt, $whitePieces, $targetColor);
+                    $isOccupied = $this->isOccupied($waitingSet, $initialPosChar, $initialPosInt, $activeSet, $targetColor);
                     $isObstructed = $isOccupied[0];
                 }
             }else{
                 while($initialPosInt != $finalPosInt-1 && $isObstructed == false){
                     $initialPosInt += 1;
-                    $isOccupied = $this->isOccupied($blackPieces, $initialPosChar, $initialPosInt, $whitePieces, $targetColor);
+                    $isOccupied = $this->isOccupied($waitingSet, $initialPosChar, $initialPosInt, $activeSet, $targetColor);
                     $isObstructed = $isOccupied[0];
                 }
             }
@@ -589,7 +624,7 @@ class ChessController extends Controller
                 while($initialPosChar != chr(ord($finalPosChar)-1) && $initialPosInt != $finalPosInt -1 && $isObstructed == false){
                     $initialPosChar = chr(ord($initialPosChar)+1);
                     $initialPosInt += 1;
-                    $isOccupied = $this->isOccupied($blackPieces, $initialPosChar, $initialPosInt, $whitePieces, $targetColor);
+                    $isOccupied = $this->isOccupied($waitingSet, $initialPosChar, $initialPosInt, $activeSet, $targetColor);
                     $isObstructed = $isOccupied[0];
                 }
 
@@ -599,7 +634,7 @@ class ChessController extends Controller
                 while($initialPosChar != chr(ord($finalPosChar)-1) && $initialPosInt != $finalPosInt +1 && $isObstructed == false){
                     $initialPosChar = chr(ord($initialPosChar)+1);
                     $initialPosInt -= 1;
-                    $isOccupied = $this->isOccupied($blackPieces, $initialPosChar, $initialPosInt, $whitePieces, $targetColor);
+                    $isOccupied = $this->isOccupied($waitingSet, $initialPosChar, $initialPosInt, $activeSet, $targetColor);
                     $isObstructed = $isOccupied[0];
                 }
 
@@ -609,7 +644,7 @@ class ChessController extends Controller
                 while($initialPosChar != chr(ord($finalPosChar)+1) && $initialPosInt != $finalPosInt -1 && $isObstructed == false){
                     $initialPosChar = chr(ord($initialPosChar)-1);
                     $initialPosInt += 1;
-                    $isOccupied = $this->isOccupied($blackPieces, $initialPosChar, $initialPosInt, $whitePieces, $targetColor);
+                    $isOccupied = $this->isOccupied($waitingSet, $initialPosChar, $initialPosInt, $activeSet, $targetColor);
                     $isObstructed = $isOccupied[0];
                 }
 
@@ -619,7 +654,7 @@ class ChessController extends Controller
                 while($initialPosChar != chr(ord($finalPosChar)+1) && $initialPosInt != $finalPosInt +1 && $isObstructed == false){
                     $initialPosChar = chr(ord($initialPosChar)-1);
                     $initialPosInt -= 1;
-                    $isOccupied = $this->isOccupied($blackPieces, $initialPosChar, $initialPosInt, $whitePieces, $targetColor);
+                    $isOccupied = $this->isOccupied($waitingSet, $initialPosChar, $initialPosInt, $activeSet, $targetColor);
                     $isObstructed = $isOccupied[0];
                 }
 
@@ -630,41 +665,47 @@ class ChessController extends Controller
     }
 
     //check if final position is occupied
-    function isOccupied($blackPieces, $finalPosChar, $finalPosInt, $whitePieces, $targetColor){
+    function isOccupied($waitingSet, $finalPosChar, $finalPosInt, $activeSet, $targetColor){
 
         $isOccupied = false;
         $color = '';
 
-        /*$targetColor is the color of piece being moved. if player is moving, it's white. if npc is moving, it's black.. $blackPieces and $whitePieces are not representative 
-        of the actual colors of the pieces, both players can actually be either black or white. they mean player who's making the move ($whitePieces) and the player who's
-        waiting ($blackPieces). confusing, I know, haven't thought this far before I named the variables. because of this I have to check who's moving to return the right color 
-        to flag if piece can move or not. */ 
+        /*$targetColor is the color of piece being moved. if player is moving, it's white. if npc is moving, it's black*/
 
-        foreach($blackPieces as $piece){
+        foreach($waitingSet as $piece){
+            //error_log('isOccupied ' . $piece[0].$piece[1]);
             if($piece[0] == $finalPosChar && $piece[1] == $finalPosInt){
                 $isOccupied = true;
+
+                //if $targetColor is 'white', means $waitingSet is the black set
+
                 if($targetColor == 'white'){
                     $color = 'black';
                 }else{
                     $color = 'white';
                 }
-                //$color = 'black';
+                
                 break;
             }
         }
 
-        foreach($whitePieces as $piece){
-            if($piece[0] == $finalPosChar && $piece[1] == $finalPosInt){
-                $isOccupied = true;
-                if($targetColor != 'white'){
-                    $color = 'black';
-                }else{
-                    $color = 'white';
+        if(!$isOccupied){
+            foreach($activeSet as $piece){
+                if($piece[0] == $finalPosChar && $piece[1] == $finalPosInt){
+                    $isOccupied = true;
+    
+                    if($targetColor == 'white'){
+                        $color = 'white';
+                    }else{
+                        $color = 'black';
+                    }
+                    
+                    
+                    break;
                 }
-                //$color = 'white';
-                break;
             }
         }
+ 
 
         return [$isOccupied, $color];
     }
@@ -734,34 +775,31 @@ class ChessController extends Controller
     function npcMove($whitePieces, $blackPieces){
 
         
-        $result = [];
+        $result = [false, false, false];
 
         $priorityAttackList = ['king', 'queen', 'bishop1', 'bishop2', 'rook1', 'rook2', 'knight1', 'knight2', 'pawn1', 'pawn2', 'pawn3', 'pawn4', 'pawn5', 'pawn6', 'pawn7', 'pawn8'];
         $priorityMoveList = ['pawn1', 'pawn2', 'pawn3', 'pawn4', 'pawn5', 'pawn6', 'pawn7', 'pawn8', 'knight1', 'knight2', 'bishop1', 'bishop2', 'rook1', 'rook2', 'queen', 'king'];
 
         foreach($priorityAttackList as $priority){
-            $target = $whitePieces[$priority][0] . $whitePieces[$priority][1];
-            
-            $result = $this->npcPieceMovement($priorityMoveList, $blackPieces, $whitePieces, $target);
-
-            if($result[2]){
-
-                $whitePieces = $result[0];
-                $blackPieces = $result[1];
-
-                break;
-                //goto end;
-            }
+            if(array_key_exists($priority, $whitePieces)){
+                $target = $whitePieces[$priority][0] . $whitePieces[$priority][1];
+                //error_log($target);
+                $result = $this->npcPieceMovement($priorityMoveList, $blackPieces, $whitePieces, $target);
+    
+                if($result[2]){
+    
+                    $whitePieces = $result[0];
+                    $blackPieces = $result[1];
+    
+                    break;
+                    //goto end;
+                }
+            } 
         }
 
         if(!$result[2]){
             $blackPieces = $this->npcRandomMovement($priorityMoveList, $blackPieces, $whitePieces);
         }
-
-        
-
-
-
 
         //find open spaces around target piece
         /*$possibleTargets = $this->checkSurroundings('king', $whitePieces, $blackPieces);
@@ -856,7 +894,7 @@ class ChessController extends Controller
 
     }
 
-    function npcRandomMovement($piecesToMove, $blackPieces, $whitePieces){
+    function npcRandomMovement($piecesToMove, $activeSet, $waitingSet){
 
         $repeat = true;
         $target = "";
@@ -866,26 +904,26 @@ class ChessController extends Controller
 
             //select a random piece from $piecesToMove
             $piece = array_rand(array_flip($piecesToMove), 1);
-            //$piece = 'knight2';
+            //$piece = 'rook1';
             //get its position from $blackPieces
-            $positionChar = $blackPieces[$piece][0];
-            $positionInt = $blackPieces[$piece][1];
+            $positionChar = $activeSet[$piece][0];
+            $positionInt = $activeSet[$piece][1];
 
             if($piece == 'queen' || $piece == 'king'){
                 $p = $piece;
             }else{
                 $p = substr_replace($piece, "", -1);
             }
-
+            error_log($piece);
             switch($p){
                 case('pawn'):
-                    if(array_key_exists($piece, $blackPieces)){
+                    if(array_key_exists($piece, $activeSet)){
                         $target = $positionChar . $positionInt-1;
-                        $canMovePiece = $this->canMovePawn($piece, $target, $blackPieces, $whitePieces, 1, 'black');
+                        $canMovePiece = $this->canMovePawn($piece, $target, $activeSet, $waitingSet, 1, 'black');
                     }
                     break;
                 case('king'):
-                    if(array_key_exists($piece, $blackPieces)){
+                    if(array_key_exists($piece, $activeSet)){
                         $movementMap = [
                             chr(ord($positionChar)+1) . $positionInt,
                             chr(ord($positionChar)-1) . $positionInt,
@@ -898,7 +936,7 @@ class ChessController extends Controller
                         ];
                         shuffle($movementMap);
                         foreach($movementMap as $target){
-                            $canMovePiece = $this->canMoveKing($piece, $target, $blackPieces, $whitePieces, 'black');
+                            $canMovePiece = $this->canMoveKing($piece, $target, $activeSet, $waitingSet, 'black');
                             if($canMovePiece[0]){
                                 break;
                             }
@@ -907,7 +945,7 @@ class ChessController extends Controller
                     }
                     break;
                 case('knight'):
-                    if(array_key_exists($piece, $blackPieces)){
+                    if(array_key_exists($piece, $activeSet)){
                         $movementMap = [
                             chr(ord($positionChar)+1) . $positionInt + 2,
                             chr(ord($positionChar)-1) . $positionInt + 2,
@@ -920,7 +958,7 @@ class ChessController extends Controller
                         ];
                         shuffle($movementMap);
                         foreach($movementMap as $target){
-                            $canMovePiece = $this->canMoveKnight($piece, $target, $blackPieces, $whitePieces, 'black');
+                            $canMovePiece = $this->canMoveKnight($piece, $target, $activeSet, $waitingSet, 'black');
                             if($canMovePiece[0]){
                                 break;
                             }
@@ -929,7 +967,7 @@ class ChessController extends Controller
                     }
                     break;
                 case('rook'):
-                    if(array_key_exists($piece, $blackPieces)){
+                    if(array_key_exists($piece, $activeSet)){
                         for($i = 1; $i < 9; $i++){
                             array_push($movementMap, $positionChar . $i);
                         }
@@ -939,7 +977,8 @@ class ChessController extends Controller
                         }
                         shuffle($movementMap);
                         foreach($movementMap as $target){
-                            $canMovePiece = $this->canMoveRook($piece, $target, $blackPieces, $whitePieces, 'black');
+                            error_log($target);
+                            $canMovePiece = $this->canMoveRook($piece, $target, $activeSet, $waitingSet, 'black');
                             if($canMovePiece[0]){
                                 break;
                             }
@@ -947,7 +986,7 @@ class ChessController extends Controller
                     }
                     break;
                 case('bishop'):
-                    if(arry_key_exists($piece, $blackPieces)){
+                    if(array_key_exists($piece, $activeSet)){
                         $numbers = [1, 2, 3, 4, 5, 6, 7, 8];
                         $letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
                         foreach($letters as $k=>$letter){
@@ -961,7 +1000,7 @@ class ChessController extends Controller
                         }
                         shuffle($movementMap);
                         foreach($movementMap as $target){
-                            $canMovePiece = $this->canMoveBishop($piece, $target, $blackPieces, $whitePieces, 'black');
+                            $canMovePiece = $this->canMoveBishop($piece, $target, $activeSet, $waitingSet, 'black');
                             if($canMovePiece[0]){
                                 break;
                             }
@@ -969,7 +1008,7 @@ class ChessController extends Controller
                     }
                     break;
                 case('queen'):
-                    if(array_key_exists($piece, $blackPieces)){
+                    if(array_key_exists($piece, $activeSet)){
                         $numbers = [1, 2, 3, 4, 5, 6, 7, 8];
                         $letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
                         foreach($letters as $k=>$letter){
@@ -979,28 +1018,37 @@ class ChessController extends Controller
                         }
                         shuffle($movementMap);
                         foreach($movementMap as $target){
-                            $canMovePiece = $this->canMoveQueen($piece, $target, $blackPieces, $whitePieces, 'black');
+                            $canMovePiece = $this->canMoveQueen($piece, $target, $activeSet, $waitingSet, 'black');
                             if($canMovePiece[0]){
                                 break;
                             }
                         }
                     }
                     break;
-                
+                default:
+                    $canMovePiece[0] = false;
             }
+
+            //error_log($canMovePiece[0]);
 
             if($canMovePiece[0]){
 
                 $repeat = false;
        
-                $blackPieces = $this->changePiecePosition($target, $blackPieces, $piece);
+                $activeSet = $this->changePiecePosition($target, $activeSet, $piece);
 
                 break ;
+            }else{
+                
+
+                $key = array_search($piece, $piecesToMove);
+                if ($key != ''){
+                    unset($piecesToMove[$key]);
+                }
+                
+                
             }
 
-            if (($key = array_search($piece, $piecesToMove)) !== false) {
-                unset($piecesToMove[$key]);
-            }
 
 
             /*choose a random position within range for it to move to
@@ -1011,11 +1059,11 @@ class ChessController extends Controller
             */
         }
         
-        return $blackPieces;
+        return $activeSet;
 
     }
 
-    function npcPieceMovement($pieces, $blackPieces, $whitePieces, $target){
+    function npcPieceMovement($pieces, $activeSet, $waitingSet, $target){
 
         $canMovePiece = [false];
         $moved = false;
@@ -1028,39 +1076,36 @@ class ChessController extends Controller
                 $p = substr_replace($piece, "", -1);
             }
 
-            
+            //error_log($piece);
                 switch($p){
                     case('bishop'):
-                        if(array_key_exists($piece, $blackPieces)){
-                            $canMovePiece = $this->canMoveBishop($piece, $target, $blackPieces, $whitePieces, 'black');
+                        if(array_key_exists($piece, $activeSet)){
+                            $canMovePiece = $this->canMoveBishop($piece, $target, $activeSet, $waitingSet, 'black');
                         }
                         break;
                     case('queen'):
-                        if(array_key_exists($piece, $blackPieces)){
-                            $canMovePiece = $this->canMoveQueen($piece, $target, $blackPieces, $whitePieces, 'black');
+                        if(array_key_exists($piece, $activeSet)){
+                            $canMovePiece = $this->canMoveQueen($piece, $target, $activeSet, $waitingSet, 'black');
                         }
                         break;
                     case('rook'):
-                        if(array_key_exists($piece, $blackPieces)){
-                            $canMovePiece = $this->canMoveRook($piece, $target, $blackPieces, $whitePieces, 'black');
+                        if(array_key_exists($piece, $activeSet)){
+                            $canMovePiece = $this->canMoveRook($piece, $target, $activeSet, $waitingSet, 'black');
                         }
                         break;
                     case('knight'):
-                        if(array_key_exists($piece, $blackPieces)){
-                            $canMovePiece = $this->canMoveKnight($piece, $target, $blackPieces, $whitePieces, 'black');
+                        if(array_key_exists($piece, $activeSet)){
+                            $canMovePiece = $this->canMoveKnight($piece, $target, $activeSet, $waitingSet, 'black');
                         }
                         break;
                     case('king'):
-                        if(array_key_exists($piece, $blackPieces)){
-                            $canMovePiece = $this->canMoveKing($piece, $target, $blackPieces, $whitePieces, 'black');
+                        if(array_key_exists($piece, $activeSet)){
+                            $canMovePiece = $this->canMoveKing($piece, $target, $activeSet, $waitingSet, 'black');
                         }
                         break;
                     case('pawn'):
-                        
-                        if(array_key_exists($piece, $blackPieces)){
-                            
-                            $canMovePiece = $this->canMovePawn($piece, $target, $blackPieces, $whitePieces, 1, 'black');
-                            
+                        if(array_key_exists($piece, $activeSet)){
+                            $canMovePiece = $this->canMovePawn($piece, $target, $activeSet, $waitingSet, 1, 'black');  
                         }
                         break;
                 }
@@ -1071,15 +1116,15 @@ class ChessController extends Controller
 
                 $moved = true;
 
-                $whitePieces = $this->removeFromPieces($target, $whitePieces);
+                $waitingSet = $this->removeFromPieces($target, $waitingSet);
        
-                $blackPieces = $this->changePiecePosition($target, $blackPieces, $piece);
+                $activeSet = $this->changePiecePosition($target, $activeSet, $piece);
 
                 break ;
             }
         }
 
-        return [$whitePieces, $blackPieces, $moved];
+        return [$waitingSet, $activeSet, $moved];
     }
 
     //function checkCondition(){}
