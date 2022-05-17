@@ -10,6 +10,7 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\PostLikesController;
 use App\Http\Controllers\BattleshipController;
 use App\Http\Controllers\ChessController;
+use App\Http\Controllers\UnoController;
 
 
 /*
@@ -126,6 +127,12 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
     Route::post('challenges/chess-move/{piece}/{position}', [ChessController::class, 'movePiece']);
 
     Route::post('challenges/chess-end', [ChessController::class, 'endGame']);
+
+    //--------------------------------------------------------------------------------------------
+
+    Route::post('challenges/uno-start', [UnoController::class, 'startGame']);
+
+    Route::post('challenges/uno-end', [UnoController::class, 'endGame']);
 
 });
 

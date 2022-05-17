@@ -28,7 +28,9 @@ return new class extends Migration
             $table->text('player3');
             $table->integer('player3points');
             $table->text('deck');
+            $table->text('pile');
             $table->integer('turns');
+            $table->string('direction');
             $table->timestamp('date_started', $precision=0);
         });
     }

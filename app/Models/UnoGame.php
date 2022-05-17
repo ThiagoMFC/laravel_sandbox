@@ -25,7 +25,9 @@ class UnoGame extends Model
         'player3',
         'player3points',
         'deck',
+        'pile',
         'turns',
+        'direction',
         'date_started'
     ];
 }
