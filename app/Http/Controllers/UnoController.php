@@ -28,6 +28,8 @@ class UnoController extends Controller
             ], 401);
         }
 
+        //all cards with their colors and actions. '-' will be pushed to discard pile($cardOnTable) as action whenever a player 
+        //is skipped (either because of +2, +4 or block) and/or color is changed.
         $cards = [
             ['red', '0'],
             ['red', '1'],
@@ -161,29 +163,69 @@ class UnoController extends Controller
         //cant have a wild +4 as first on discard pile
         foreach($cards as $key=>$card){
             if($card[1] != '+4'){
-                $cardOnTable = $cards[$key];
+                $cardOnTable = [$cards[$key]];
                 unset($cards[$key]);
                 break;
             }
         }
 
 
+        /*
+        '-' will be pushed to discard pile($cardOnTable) as action whenever a player 
+        is skipped (either because of +2, +4 or block) and/or color is changed.
+        below possible expected sequence of play
+        first card on table | player 4 plays | player 4 choses color | player 3 is skipped | player 2 plays
+        [['red', 'reverse'],  ['wild', '+4'],     ['green', '+4'],       ['green', '-'],     ['green', '2']];
+        */
 
-        
+        //$cardOnTable = [['red', 'reverse']];
 
-        if($cardOnTable[1] == 'reverse'){
+        $npcHands = [$player1hand, $player2hand, $player3hand];
+
+        if($cardOnTable[0][1] == 'reverse'){
             //plays 4 to 0
             $direction = 'counterClockWise';
+            
+            //starts round by npc 3 (player 4)
+            $play = 2;
+            //reverse card loop. let npcPlay while theyre using reverse cards among themselves.
+            while($play < 3 && $play >= 0){
+                $npcPlay = $this->npcPlay($npcHands[$play], $cards, $cardOnTable);
+                $npcHands[$play] = $npcPlay[0];
+                $cards = $npcPlay[1];
+                $cardOnTable = $npcPlay[2];
+                if(end($cardOnTable)[1] != 'reverse'){
+                    $play -= 1;
+                }else{
+                    $play += 1;
+                }
+            }
         }else{
             //plays 0 to 4
             $direction = 'clockWise';
-            //if($cardOnTable[1] == 'block'){skip player 0}
+            if($cardOnTable[0][1] == 'block'){
+                //skip player 0 (user) and let npcPlay
+                array_push($cardOnTable, [$cardOnTable[0][0], '-']);
+                //starts round by npc player 1
+                $play = 0;
+                while($play < 3 && $play >= 0){
+                    $npcPlay = $this->npcPlay($npcHands[$play], $cards, $cardOnTable);
+                    $npcHands[$play] = $npcPlay[0];
+                    $cards = $npcPlay[1];
+                    $cardOnTable = $npcPlay[2];
+                    if(end($cardOnTable)[1] != 'reverse'){
+                        $play += 1;
+                    }else{
+                        $play -= 1;
+                    }
+                }
+            }
         }
 
         $p0h = serialize($player0hand);
-        $p1h = serialize($player1hand);
-        $p2h = serialize($player2hand);
-        $p3h = serialize($player3hand);
+        $p1h = serialize($npcHands[0]);
+        $p2h = serialize($npcHands[1]);
+        $p3h = serialize($npcHands[2]);
         $pile = serialize($cardOnTable);
         $deck = serialize($cards);
 
@@ -215,12 +257,16 @@ class UnoController extends Controller
                 'on table' => $cardOnTable,
                 'your cards' => $player0hand,
                 'your points' => 0,
-                'player 2 hand' => count($player1hand),
+                'player 2 hand' => count($npcHands[0]),
+                //'player 2 hand' => $npcHands[0],
                 'player 2 points' => 0,
-                'player 3 hand' => count($player2hand),
-                'player 3 points' => 0
-                'player 4 hand' => count($player3hand),
-                'player 4 points' => 0
+                'player 3 hand' => count($npcHands[1]),
+                //'player 3 hand' => $npcHands[1],
+                'player 3 points' => 0,
+                'player 4 hand' => count($npcHands[2]),
+                //'player 4 hand' => $npcHands[2],
+                'player 4 points' => 0,
+                'deck' => $cards
             ], 201);
         }else{
             return response([
@@ -274,7 +320,7 @@ class UnoController extends Controller
 
     }
 
-    function npcPlay($hand, $deck, $pile, $color){
+    function npcPlay($hand, $deck, $pile){
 
         //hand, deck and pile are subsets of the same original array so same structure
         
@@ -283,7 +329,7 @@ class UnoController extends Controller
 
         //check if special card
         if($topPileAction == '+4'){
-            //if wild +4 draws 4 and misses turn
+            //if +4 draws 4 and misses turn
 
             for($i = 0; $i < 4; $i++){
                 array_push($hand, [end($deck)[0], end($deck)[1]]);
@@ -301,6 +347,13 @@ class UnoController extends Controller
                 array_push($hand, [end($deck)[0], end($deck)[1]]);
                 unset($deck[array_key_last($deck)]);
             }
+
+            array_push($pile, [$topPileColor, '-']);
+
+            return [$hand, $deck, $pile];
+
+        }else if($topPileAction == 'block'){
+            //misses turn
 
             array_push($pile, [$topPileColor, '-']);
 
@@ -358,19 +411,30 @@ class UnoController extends Controller
 
                 array_push($pile, [end($deck)[0], end($deck)[1]]);
 
-            }else if([end($deck)[0] == 'wild'){
+                unset($deck[array_key_last($deck)]);
+
+            }else if(end($deck)[0] == 'wild'){
                 //draw card, play it if possible (wild)
 
                 array_push($pile, [end($deck)[0], end($deck)[1]]);
+
+                //pick color to be played by next player
+                $colors = ['red', 'green', 'blue', 'yellow'];
+                $color = array_rand(array_flip($colors), 1);
+
+                array_push($pile, [$color, '-']);
+
+                unset($deck[array_key_last($deck)]);
+ 
 
             }else{
                 //draw card, can't play. add to hand
 
                 array_push($hand, [end($deck)[0], end($deck)[1]]);
 
-            }
+                unset($deck[array_key_last($deck)]);
 
-            unset($deck[array_key_last($deck)]);
+            }
         }
 
 
