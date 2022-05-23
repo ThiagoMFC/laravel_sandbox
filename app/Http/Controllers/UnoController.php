@@ -321,11 +321,20 @@ class UnoController extends Controller
     }
 
     function npcPlay($hand, $deck, $pile){
+        //$hand, $deck and $pile are subsets of the same original $cards array so same structure
 
-        //hand, deck and pile are subsets of the same original array so same structure
-        
+
         $topPileColor = end($pile)[0];
         $topPileAction = end($pile)[1];
+
+        if(sizeOf($deck) == 0){
+            //reset $deck
+            $reset = $this->resetDeck($deck, $pile);
+            $deck = $reset[0];
+            $pile = $reset[1];
+
+            //I miss multiple return values from Go so much
+        }
 
         //check if special card
         if($topPileAction == '+4'){
@@ -440,5 +449,25 @@ class UnoController extends Controller
 
         return [$hand, $deck, $pile];
 
+    }
+
+    function resetDeck($deck, $pile){
+
+        $topPileColor = end($pile)[0];
+        $topPileAction = end($pile)[1];
+
+        //remove '-' from $pile
+        foreach($pile as $key=>$card){
+            if($card[1] == '-'){
+                unset($pile[$key]);
+            }
+        }
+
+        //remove last from $pile before resetting it as $deck
+        unset($pile(array_key_last($pile)));
+
+        $deck = shuffle($pile);
+
+        return [$deck, [$topPileColor, $topPileAction]];
     }
 }
