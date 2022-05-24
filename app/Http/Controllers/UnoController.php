@@ -8,6 +8,7 @@ use App\Models\UnoGame;
 use Carbon\Carbon;
 use App\Lib\HelperClass;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class UnoController extends Controller
 {
@@ -184,7 +185,7 @@ class UnoController extends Controller
 
         if($cardOnTable[0][1] == 'reverse'){
             //plays 4 to 0
-            $direction = 'counterClockWise';
+            $direction = 'counterClockwise';
             
             //starts round by npc 3 (player 4)
             $play = 2;
@@ -202,7 +203,7 @@ class UnoController extends Controller
             }
         }else{
             //plays 0 to 4
-            $direction = 'clockWise';
+            $direction = 'clockwise';
             if($cardOnTable[0][1] == 'block'){
                 //skip player 0 (user) and let npcPlay
                 array_push($cardOnTable, [$cardOnTable[0][0], '-']);
@@ -266,7 +267,7 @@ class UnoController extends Controller
                 'player 4 hand' => count($npcHands[2]),
                 //'player 4 hand' => $npcHands[2],
                 'player 4 points' => 0,
-                'deck' => $cards
+                //'deck' => $cards
             ], 201);
         }else{
             return response([
@@ -300,10 +301,17 @@ class UnoController extends Controller
         ], 200);
     }
 
+    public function userDrawCard(){}
+
+    public function userSkip(){}
+
     public function userPlay(Request $request){
 
         $fields = $request->validate([
             'user_id' => 'required',
+            'color' => 'required|string',
+            'action' => 'required|string',
+            'color_change' => 'required_if:color, "wild"',
         ]);
 
         $token = $request->bearerToken();
@@ -316,6 +324,135 @@ class UnoController extends Controller
                 'message' => 'invalid request, user invalid',
             ], 401);
         }
+
+        $userHasCard = false;
+        $canPlayCard = false;
+        $message = '';
+
+        $playInfo = DB::table('uno_games as ug')->select('ug.player0 as hand', 'ug.player0points as p0points', 
+        'ug.player1 as npc1hand', 'ug.player1points as p1points',
+        'ug.player2 as npc2hand', 'ug.player2points as p2points',
+        'ug.player3 as npc3hand', 'ug.player3points as p3points', 
+        'ug.deck as deck', 'ug.pile as pile', 'ug.direction as direction', 'ug.turns as turns')->where('user_id', '=', $fields['user_id'])
+        ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
+
+        $hand = unserialize($playInfo[0]->hand);
+        $deck = unserialize($playInfo[0]->deck);
+        $pile = unserialize($playInfo[0]->pile);
+        $npc1hand = unserialize($playInfo[0]->npc1hand);
+        $npc2hand = unserialize($playInfo[0]->npc2hand);
+        $npc3hand = unserialize($playInfo[0]->npc3hand);
+        $turns = $playInfo[0]->turns;
+
+        //check if user has to draw
+        if(end($pile)[1] === '+2' || end($pile)[1] === '+4'){
+            return response([
+                'message' => 'you have to draw '.end($pile)[1].' cards',
+                'on table' =>  end($pile)[0].' '.end($pile)[1],
+                'your cards' => $hand,
+            ],400);
+        }
+
+        if(sizeOf($deck) == 0){
+            //reset $deck
+            $reset = $this->resetDeck($deck, $pile);
+            $deck = $reset[0];
+            $pile = $reset[1];
+        }
+
+        $cardKey = 99;
+
+        //check if user has the card he wants to play
+        foreach($hand as $key=>$card){
+            if($card[0] === $fields['color'] && $card[1] === $fields['action']){
+                $userHasCard = true;
+                $cardKey = $key;
+                break;
+            }
+        }
+
+        if($userHasCard){
+            //check if card matches the last on pile
+            if($fields['color'] === end($pile)[0] || $fields['action'] === end($pile)[1]){
+                $canPlayCard = true;
+            }
+        }else{
+            return response([
+                'message' => 'you do not have a '.$fields['color'].' '.$fields['action'].' card',
+                'on table' =>  end($pile)[0].' '.end($pile)[1],
+                'your cards' => $hand,
+            ],400);
+        }
+
+        if($canPlayCard){
+
+            array_push($pile, $hand[$cardKey]);
+            unset($hand[$cardKey]);
+            $message .= 'You played '.$hand[$cardKey][0].' '.$hand[$cardKey][1];
+            $turn += 1;
+
+            $npcHands = [$npc1hand, $npc2hand, $npc3hand];
+
+            if($playInfo[0]->direction == 'clockwise'){
+                $play = 0;
+                while($play < 3 && $play >= 0){
+                    $npcPlay = $this->npcPlay($npcHands[$play], $deck, $pile);
+                    $npcHands[$play] = $npcPlay[0];
+                    $deck = $npcPlay[1];
+                    $pile = $npcPlay[2];
+                    if(end($pile)[1] != 'reverse'){
+                        $play += 1;
+                    }else{
+                        $play -= 1;
+                    }
+                    $turn += 1;
+                    $message .= '. Player '.$play+=1.' played '.end($pile)[0].' '.end($pile)[1];
+                }
+            }else{
+                $play = 2;
+                while($play < 3 && $play >= 0){
+                    $npcPlay = $this->npcPlay($npcHands[$play], $deck, $pile);
+                    $npcHands[$play] = $npcPlay[0];
+                    $deck = $npcPlay[1];
+                    $pile = $npcPlay[2];
+                    if(end($pile)[1] != 'reverse'){
+                        $play -= 1;
+                    }else{
+                        $play += 1;
+                    }
+                    $turn += 1;
+                    $message .= '. Player '.$play+=1.' played '.end($pile)[0].' '.end($pile)[1];
+                }
+            }
+
+        }else{
+            return response([
+                'message' => 'you cannot play '.$fields['color'].' '.$fields['action'],
+                'on table' => end($pile)[0].' '.end($pile)[1],
+                'your cards' => $hand,
+            ],400);
+        }
+
+
+        /*return response([
+            'color' => $fields['color'],
+            'action' => $fields['action'],
+            //'color_change' => $fields['color_change'],
+            
+        ],200);*/
+
+        return response([
+            'message' => $message,
+            'on table' => end($pile)[0].' '.end($pile)[1],
+            'your cards' => $hand,
+            'your points' => $playInfo[0]->p0points,
+            'player 2 hand' => count($npcHands[0]),
+            'player 2 points' => $playInfo[0]->p1points,
+            'player 3 hand' => count($npcHands[1]),
+            'player 3 points' => $playInfo[0]->p2points,
+            'player 4 hand' => count($npcHands[2]),
+            'player 4 points' => $playInfo[0]->p3points,
+        ], 201);
 
 
     }
@@ -464,7 +601,7 @@ class UnoController extends Controller
         }
 
         //remove last from $pile before resetting it as $deck
-        unset($pile(array_key_last($pile)));
+        unset($pile[array_key_last($pile)]);
 
         $deck = shuffle($pile);
 
