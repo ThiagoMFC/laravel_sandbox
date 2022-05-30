@@ -136,6 +136,8 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
 
     Route::post('challenges/uno-play', [UnoController::class, 'userPlay']);
 
+    Route::post('challenges/uno-draw', [UnoController::class, 'userDraw']);
+
 });
 
 /*Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

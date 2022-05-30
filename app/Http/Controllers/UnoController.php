@@ -170,7 +170,7 @@ class UnoController extends Controller
             }
         }
 
-        $cardOnTable = [['red', 'reverse']];
+        //$cardOnTable = [['red', 'reverse']];
 
         if($cardOnTable[0][1] == 'reverse'){
             $direction = 'counterClockwise';
@@ -178,6 +178,11 @@ class UnoController extends Controller
             $direction = 'clockwise';
         }
 
+        if($cardOnTable[0][1] == 'change'){
+            $colors = ['red', 'green', 'blue', 'yellow'];
+            $color = array_rand(array_flip($colors), 1);
+            array_push($cardOnTable, [$color, '-']);
+        }
 
 
         $p0h = serialize($player0hand);
@@ -243,7 +248,8 @@ class UnoController extends Controller
 
         return response([
             'message' => 'game started and is running '. $direction . ' '.$message,
-            'on table' => end($pile)[0].' '.end($pile)[1],
+            //'on table' => end($pile)[0].' '.end($pile)[1],
+            'on table' => $pile,
             'your cards' => $hand,
             'your points' => 0,
             'player 2 hand' => count($npc1hand),
@@ -387,9 +393,139 @@ class UnoController extends Controller
         ], 200);
     }
 
-    public function userDrawCard(){}
+    public function userDraw(Request $request){
+        $fields = $request->validate([
+            'user_id' => 'required'
+        ]);
 
-    public function userSkip(){}
+        $token = $request->bearerToken();
+
+        $helper = new HelperClass();
+        $validateUser = $helper->checkToken($fields['user_id'], $token);
+
+        if(!$validateUser){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $playInfo = DB::table('uno_games as ug')->select('ug.player0 as hand', 'ug.player0points as p0points', 
+            'ug.player1 as npc1hand', 'ug.player1points as p1points',
+            'ug.player2 as npc2hand', 'ug.player2points as p2points',
+            'ug.player3 as npc3hand', 'ug.player3points as p3points', 
+            'ug.deck as deck', 'ug.pile as pile', 'ug.turns as turns')->where('user_id', '=', $fields['user_id'])
+            ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
+
+        $hand = unserialize($playInfo[0]->hand);
+        $deck = unserialize($playInfo[0]->deck);
+        $pile = unserialize($playInfo[0]->pile);
+        $npc1hand = unserialize($playInfo[0]->npc1hand);
+        $npc2hand = unserialize($playInfo[0]->npc2hand);
+        $npc3hand = unserialize($playInfo[0]->npc3hand);
+        $turns = $playInfo[0]->turns;       
+
+        if(sizeOf($deck) == 0){
+            //reset $deck
+            $reset = $this->resetDeck($deck, $pile);
+            $deck = $reset[0];
+            $pile = $reset[1];
+        }    
+
+        array_push($hand, [end($deck)[0], end($deck)[1]]);
+        unset($deck[array_key_last($deck)]);
+
+        $sd = serialize($deck);
+        $sh = serialize($hand);
+
+        $gameUpdate = UnoGame::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)->where('status', '=', 'ongoing')
+        ->update(['deck' => $sd, 'player0' => $sh]);
+
+        if($gameUpdate){
+            return response([
+                //'on table' => end($pile)[0].' '.end($pile)[1],
+                'on table' => $pile,
+                'your cards' => $hand,
+                'your points' => $playInfo[0]->p0points,
+                'player 2 hand' => count($npc1hand),
+                'player 2 points' => $playInfo[0]->p1points,
+                'player 3 hand' => count($npc2hand),
+                'player 3 points' => $playInfo[0]->p2points,
+                'player 4 hand' => count($npc3hand),
+                'player 4 points' => $playInfo[0]->p3points,
+                'turns' => $turns
+            ], 201);
+        }else{
+            return 'error drawing card';
+        }
+    }
+
+    /*function autoDraw($quantity){
+        
+    }*/
+
+    public function userSkip(Request $request){
+        $fields = $request->validate([
+            'user_id' => 'required'
+        ]);
+
+        $token = $request->bearerToken();
+
+        $helper = new HelperClass();
+        $validateUser = $helper->checkToken($fields['user_id'], $token);
+
+        if(!$validateUser){
+            return response([
+                'message' => 'invalid request, user invalid',
+            ], 401);
+        }
+
+        $message = $this->npcRound($fields['user_id'], $token);
+
+        if($message == 'bad'){
+            return response([
+                'message' => 'error skipping turn',
+            ], 500);
+        }
+
+        $playInfo = DB::table('uno_games as ug')->select('ug.player0 as hand', 'ug.player0points as p0points', 
+            'ug.player1 as npc1hand', 'ug.player1points as p1points',
+            'ug.player2 as npc2hand', 'ug.player2points as p2points',
+            'ug.player3 as npc3hand', 'ug.player3points as p3points', 
+            'ug.deck as deck', 'ug.pile as pile', 'ug.turns as turns')->where('user_id', '=', $fields['user_id'])
+            ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
+
+            $hand = unserialize($playInfo[0]->hand);
+            $deck = unserialize($playInfo[0]->deck);
+            $pile = unserialize($playInfo[0]->pile);
+            $npc1hand = unserialize($playInfo[0]->npc1hand);
+            $npc2hand = unserialize($playInfo[0]->npc2hand);
+            $npc3hand = unserialize($playInfo[0]->npc3hand);
+            $turns = $playInfo[0]->turns;
+
+        if(!$playInfo){
+            return response([
+                'message' => 'error updating round',
+            ], 500);
+        }
+
+        return response([
+            'message' => 'You skipped your turn. '.$message,
+            //'on table' => end($pile)[0].' '.end($pile)[1],
+            'on table' => $pile,
+            'your cards' => $hand,
+            'your points' => $playInfo[0]->p0points,
+            'player 2 hand' => count($npc1hand),
+            'player 2 points' => $playInfo[0]->p1points,
+            'player 3 hand' => count($npc2hand),
+            'player 3 points' => $playInfo[0]->p2points,
+            'player 4 hand' => count($npc3hand),
+            'player 4 points' => $playInfo[0]->p3points,
+            'turns' => $turns
+        ], 201);
+
+        
+        
+    }
 
     public function userPlay(Request $request){
 
@@ -435,7 +571,8 @@ class UnoController extends Controller
         if(end($pile)[1] === '+2' || end($pile)[1] === '+4'){
             return response([
                 'message' => 'you have to draw '.end($pile)[1].' cards',
-                'on table' =>  end($pile)[0].' '.end($pile)[1],
+                //'on table' =>  end($pile)[0].' '.end($pile)[1],
+                'on table' => $pile,
                 'your cards' => $hand,
                 '' => $pile,
             ],400);
@@ -458,6 +595,8 @@ class UnoController extends Controller
                 break;
             }
         }
+
+        error_log($cardKey);
 
         if($userHasCard){
             //check if card matches the last on pile
@@ -574,7 +713,8 @@ class UnoController extends Controller
 
         return response([
             'message' => $message,
-            'on table' => end($pile)[0].' '.end($pile)[1],
+            //'on table' => end($pile)[0].' '.end($pile)[1],
+            'on table' => $pile,
             'your cards' => $hand,
             'your points' => $playInfo[0]->p0points,
             'player 2 hand' => count($npc1hand),
@@ -613,33 +753,43 @@ class UnoController extends Controller
             $play = 0;
             while($play < 3 && $play >= 0){
                 $npcPlay = $this->npcPlay($npcHands[$play], $deck, $pile);
+                $temp = $npcHands[$play];
                 $npcHands[$play] = $npcPlay[0];
                 $deck = $npcPlay[1];
                 $pile = $npcPlay[2];
-                if(end($pile)[1] != 'reverse'){
+                if($npcPlay[0] > $temp){
+                    $message .= '. NPC '.$play.' draw '.sizeOf($npcPlay[0]) - sizeOf($temp);
+                }else{
+                    $message .= '. NPC '.$play.' played '.end($pile)[0].' '.end($pile)[1];
+                }
+                if(end($pile)[1] != 'reverse' && $changeDirection == false){
                     $play += 1;
                 }else{
                     $play -= 1;
                     $changeDirection = !$changeDirection;
                 }
-                $turns += 1;
-                $message .= '. Player '.($play+1).' played '.end($pile)[0].' '.end($pile)[1];
+                
             }
         }else{
             $play = 2;
             while($play < 3 && $play >= 0){
                 $npcPlay = $this->npcPlay($npcHands[$play], $deck, $pile);
+                $temp = $npcHands[$play];
                 $npcHands[$play] = $npcPlay[0];
                 $deck = $npcPlay[1];
                 $pile = $npcPlay[2];
-                if(end($pile)[1] != 'reverse'){
+                if($npcPlay[0] > $temp){
+                    $message .= '. NPC '.$play.' draw '.sizeOf($npcPlay[0]) - sizeOf($temp);
+                }else{
+                    $message .= '. NPC '.$play.' played '.end($pile)[0].' '.end($pile)[1];
+                }
+                if(end($pile)[1] != 'reverse' && $changeDirection == false){
                     $play -= 1;
                 }else{
                     $play += 1;
                     $changeDirection = !$changeDirection;
                 }
-                $turns += 1;
-                $message .= '. Player '.($play+1).' played '.end($pile)[0].' '.end($pile)[1];
+                
             }
         }
 
@@ -687,7 +837,7 @@ class UnoController extends Controller
         }
 
         //check if special card
-        if($topPileAction == '+4'){
+        if($topPileAction === '+4'){
             //if +4 draws 4 and misses turn
 
             for($i = 0; $i < 4; $i++){
@@ -699,7 +849,7 @@ class UnoController extends Controller
 
             return [$hand, $deck, $pile];
 
-        }else if($topPileAction == '+2'){
+        }else if($topPileAction === '+2'){
             //if +2 draws 2 and misses turn
 
             for($i = 0; $i < 2; $i++){
@@ -719,10 +869,6 @@ class UnoController extends Controller
             return [$hand, $deck, $pile];
         }
 
-        //case user has played wild card and selected color, otherwise it's empty
-        /*if($color != ''){
-            $topPileColor = $color;
-        }*/
 
         $playableCard = false;
 
@@ -749,9 +895,19 @@ class UnoController extends Controller
             }
         }
 
+        //$playableCard = false; //-------------------------------
+        //$hand[4] = ['wild', '+4'];
+
         if(!$playableCard){
 
+            $deck = array_values($deck);
+            $pile = array_values($pile);
+            $hand = array_values($hand);
+
             $wild4Key = array_search('+4', array_column($hand, 1));
+
+            //error_log($wild4Key);//---------------------------------
+            //error_log($hand[$wild4Key][0]);//-------------------------
 
             if($wild4Key != ''){
                 //if wild +4 available on hand, play it
