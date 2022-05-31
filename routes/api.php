@@ -138,6 +138,8 @@ Route::group(['middleware' => ['auth:sanctum']], function(){
 
     Route::post('challenges/uno-draw', [UnoController::class, 'userDraw']);
 
+    Route::post('challenges/uno-skip', [UnoController::class, 'userSkip']);
+
 });
 
 /*Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

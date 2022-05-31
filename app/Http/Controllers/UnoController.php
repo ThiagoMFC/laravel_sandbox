@@ -184,6 +184,10 @@ class UnoController extends Controller
             array_push($cardOnTable, [$color, '-']);
         }
 
+        if($cardOnTable[0][1] == 'block'){
+            array_push($cardOnTable, [$cardOnTable[0][0], '-']);
+        }
+
 
         $p0h = serialize($player0hand);
         $p1h = serialize($player1hand);
@@ -223,7 +227,6 @@ class UnoController extends Controller
         $message = '';
 
         if($cardOnTable[0][1] == 'block'){
-            array_push($cardOnTable, [$cardOnTable[0][0], '-']);
             $message = $this->npcRound($fields['user_id'], $token);
         }else if($cardOnTable[0][1] == 'reverse'){
             $message = $this->npcRound($fields['user_id'], $token);
@@ -459,9 +462,15 @@ class UnoController extends Controller
         }
     }
 
-    /*function autoDraw($quantity){
-        
-    }*/
+    function autoDraw($quantity, $hand, $deck){
+
+        for($i = 0; $i < $quantity; $i++){
+            array_push($hand, [end($deck)[0], end($deck)[1]]);
+            unset($deck[array_key_last($deck)]);
+        }
+
+        return [$hand, $deck];
+    }
 
     public function userSkip(Request $request){
         $fields = $request->validate([
@@ -509,7 +518,7 @@ class UnoController extends Controller
         }
 
         return response([
-            'message' => 'You skipped your turn. '.$message,
+            'message' => 'You skipped your turn'.$message,
             //'on table' => end($pile)[0].' '.end($pile)[1],
             'on table' => $pile,
             'your cards' => $hand,
@@ -549,6 +558,7 @@ class UnoController extends Controller
 
         $userHasCard = false;
         $canPlayCard = false;
+        $hasToDraw = false;
         $message = '';
 
         $playInfo = DB::table('uno_games as ug')->select('ug.player0 as hand', 'ug.player0points as p0points', 
@@ -567,17 +577,6 @@ class UnoController extends Controller
         $turns = $playInfo[0]->turns;
         $direction = $playInfo[0]->direction;
 
-        //check if user has to draw
-        if(end($pile)[1] === '+2' || end($pile)[1] === '+4'){
-            return response([
-                'message' => 'you have to draw '.end($pile)[1].' cards',
-                //'on table' =>  end($pile)[0].' '.end($pile)[1],
-                'on table' => $pile,
-                'your cards' => $hand,
-                '' => $pile,
-            ],400);
-        }
-
         if(sizeOf($deck) == 0){
             //reset $deck
             $reset = $this->resetDeck($deck, $pile);
@@ -585,40 +584,79 @@ class UnoController extends Controller
             $pile = $reset[1];
         }
 
-        $cardKey = 9999;
+        //check if user has to draw
+        if(end($pile)[1] === '+2'){
+            $autoDraw = $this->autoDraw(2, $hand, $deck);
 
-        //check if user has the card he wants to play
-        foreach($hand as $key=>$card){
-            if($card[0] === $fields['color'] && $card[1] === $fields['action']){
-                $userHasCard = true;
-                $cardKey = $key;
-                break;
-            }
+            $hasToDraw = true;
+
+        }else if(end($pile)[1] === '+4'){
+            $autoDraw = $this->autoDraw(4, $hand, $deck);
+
+            $hasToDraw = true;
+
         }
 
-        error_log($cardKey);
 
-        if($userHasCard){
-            //check if card matches the last on pile
-            if($fields['color'] === end($pile)[0] || $fields['action'] === end($pile)[1]){
-                $canPlayCard = true;
-            }
+        if($hasToDraw){
+
+            $hand = $autoDraw[0];
+            $deck = $autoDraw[1];
+            array_push($pile, [end($pile)[0], '-']);
+
         }else{
-            return response([
-                'message' => 'you do not have a '.$fields['color'].' '.$fields['action'].' card',
-                'on table' =>  end($pile)[0].' '.end($pile)[1],
-                'your cards' => $hand,
-            ],400);
+
+            $cardKey = 9999;
+
+            //check if user has the card he wants to play
+            foreach($hand as $key=>$card){
+                if($card[0] === $fields['color'] && $card[1] === $fields['action']){
+                    $userHasCard = true;
+                    $cardKey = $key;
+                    break;
+                }
+            }
+
+            //error_log($cardKey);
+
+            if($userHasCard){
+                //check if card matches the last on pile
+                if($hand[$cardKey][0] === end($pile)[0] || $hand[$cardKey][1] === end($pile)[1]){
+                    $canPlayCard = true;
+                }
+            }else{
+                return response([
+                    'message' => 'you do not have a '.$fields['color'].' '.$fields['action'].' card',
+                    'on table' =>  end($pile)[0].' '.end($pile)[1],
+                    'your cards' => $hand,
+                ],400);
+            }
+
         }
+
 
         if($canPlayCard){
 
             array_push($pile, $hand[$cardKey]);
+        
             $message .= 'You played '.$hand[$cardKey][0].' '.$hand[$cardKey][1];
-            unset($hand[$cardKey]);
-            $turns += 1;
 
-            //find out about direction!1!!!
+            if($hand[$cardKey][1] == 'reverse'){
+                if($direction == 'clockwise'){
+                    $direction = 'counterClockwise';
+                }else{
+                    $direction = 'clockwise';
+                }
+            }
+
+            if($hand[$cardKey][0] == 'wild' && $hand[$cardKey][1] === '+4'){
+                array_push($pile, [$fields['color_change'], '+4']);
+            }else if($hand[$cardKey][0] == 'wild' && $hand[$cardKey][1] == 'change'){
+                array_push($pile, [$fields['color_change'], '-']);
+            }
+
+            unset($hand[$cardKey]);
+            /*$turns += 1;
 
             $sHand = serialize($hand);
             $sDeck = serialize($deck);
@@ -657,7 +695,7 @@ class UnoController extends Controller
             $npc1hand = unserialize($playInfo[0]->npc1hand);
             $npc2hand = unserialize($playInfo[0]->npc2hand);
             $npc3hand = unserialize($playInfo[0]->npc3hand);
-            $turns = $playInfo[0]->turns;
+            $turns = $playInfo[0]->turns;*/
             //-------------------------------------------------------
 
             /*$npcHands = [$npc1hand, $npc2hand, $npc3hand];
@@ -694,13 +732,54 @@ class UnoController extends Controller
                 }
             }*/
 
-        }else{
+        }else if(!$canPlayCard && !$hasToDraw){
             return response([
                 'message' => 'you cannot play '.$fields['color'].' '.$fields['action'],
                 'on table' => end($pile)[0].' '.end($pile)[1],
                 'your cards' => $hand,
             ],400);
         }
+
+        $turns += 1;
+
+        $sHand = serialize($hand);
+        $sDeck = serialize($deck);
+        $sPile = serialize($pile);
+
+        $gameUpdate = UnoGame::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)->where('status', '=', 'ongoing')
+            ->update(['player0' => $sHand, 'deck' => $sDeck, 'pile' => $sPile, 'turns' => $turns, 'direction' => $direction]);
+
+        if(!$gameUpdate){
+            return response([
+                'message' => 'There was a problem processing this round'
+            ],500);
+        }
+
+        $response = $this->npcRound($fields['user_id'], $token);
+
+        if($response == 'bad'){
+            return response([
+                'message' => 'There was a problem processing this round /b'
+            ],500);
+        }
+
+        $message .= $response;
+
+        //this bit feels so unnecessary but after isolating npcRound I needed the updated info to give to user and it's quite a bit to return from the function--------------
+        $playInfo = DB::table('uno_games as ug')->select('ug.player0 as hand', 'ug.player0points as p0points', 
+            'ug.player1 as npc1hand', 'ug.player1points as p1points',
+            'ug.player2 as npc2hand', 'ug.player2points as p2points',
+            'ug.player3 as npc3hand', 'ug.player3points as p3points', 
+            'ug.deck as deck', 'ug.pile as pile', 'ug.turns as turns')->where('user_id', '=', $fields['user_id'])
+            ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
+
+        $hand = unserialize($playInfo[0]->hand);
+        $deck = unserialize($playInfo[0]->deck);
+        $pile = unserialize($playInfo[0]->pile);
+        $npc1hand = unserialize($playInfo[0]->npc1hand);
+        $npc2hand = unserialize($playInfo[0]->npc2hand);
+        $npc3hand = unserialize($playInfo[0]->npc3hand);
+        $turns = $playInfo[0]->turns;
 
 
         /*return response([
@@ -754,11 +833,14 @@ class UnoController extends Controller
             while($play < 3 && $play >= 0){
                 $npcPlay = $this->npcPlay($npcHands[$play], $deck, $pile);
                 $temp = $npcHands[$play];
+                $temp2 = $pile;
                 $npcHands[$play] = $npcPlay[0];
                 $deck = $npcPlay[1];
                 $pile = $npcPlay[2];
                 if($npcPlay[0] > $temp){
                     $message .= '. NPC '.$play.' draw '.sizeOf($npcPlay[0]) - sizeOf($temp);
+                }else if(end($temp2)[1] == 'block'){
+                    $message .= '. NPC '.$play.' was skipped';
                 }else{
                     $message .= '. NPC '.$play.' played '.end($pile)[0].' '.end($pile)[1];
                 }
@@ -775,11 +857,14 @@ class UnoController extends Controller
             while($play < 3 && $play >= 0){
                 $npcPlay = $this->npcPlay($npcHands[$play], $deck, $pile);
                 $temp = $npcHands[$play];
+                $temp2 = $pile;
                 $npcHands[$play] = $npcPlay[0];
                 $deck = $npcPlay[1];
                 $pile = $npcPlay[2];
                 if($npcPlay[0] > $temp){
                     $message .= '. NPC '.$play.' draw '.sizeOf($npcPlay[0]) - sizeOf($temp);
+                }else if(end($temp2)[1] == 'block'){
+                    $message .= '. NPC '.$play.' was skipped';
                 }else{
                     $message .= '. NPC '.$play.' played '.end($pile)[0].' '.end($pile)[1];
                 }
@@ -873,13 +958,13 @@ class UnoController extends Controller
         $playableCard = false;
 
         foreach($hand as $key=>$card){
-            if($card[0] == $topPileColor || $card[1] == $topPileAction){
+            if($card[0] === $topPileColor || $card[1] === $topPileAction){
                 //play one card matching the discard (pile) in color, number, or symbol
                 array_push($pile, $card);
                 unset($hand[$key]);
                 $playableCard = true;
                 break;
-            }else if($card[0] == 'wild' && $card[1] != '+4'){
+            }else if($card[0] == 'wild' && $card[1] == 'change'){
                 //play a Wild card except wild +4
                 array_push($pile, $card);
                 unset($hand[$key]);
@@ -921,14 +1006,14 @@ class UnoController extends Controller
 
                 array_push($pile, [$color, '+4']);
 
-            }else if($topPileColor == end($deck)[0] || $topPileAction == end($deck)[1]){
+            }else if($topPileColor === end($deck)[0] || $topPileAction === end($deck)[1] && end($deck)[1] !== '+4'){
                 //draw card, play it if possible (color)
 
                 array_push($pile, [end($deck)[0], end($deck)[1]]);
 
                 unset($deck[array_key_last($deck)]);
 
-            }else if(end($deck)[0] == 'wild'){
+            }else if(end($deck)[0] == 'wild' && end($deck)[1] == 'change'){
                 //draw card, play it if possible (wild)
 
                 array_push($pile, [end($deck)[0], end($deck)[1]]);
@@ -942,6 +1027,16 @@ class UnoController extends Controller
                 unset($deck[array_key_last($deck)]);
  
 
+            }else if(end($deck)[0] == 'wild' && end($deck)[1] === '+4'){
+                array_push($pile, [end($deck)[0], end($deck)[1]]);
+
+                //pick color to be played by next player
+                $colors = ['red', 'green', 'blue', 'yellow'];
+                $color = array_rand(array_flip($colors), 1);
+
+                array_push($pile, [$color, '+4']);
+
+                unset($deck[array_key_last($deck)]);
             }else{
                 //draw card, can't play. add to hand
 
