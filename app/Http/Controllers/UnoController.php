@@ -656,81 +656,11 @@ class UnoController extends Controller
             }
 
             unset($hand[$cardKey]);
-            /*$turns += 1;
-
-            $sHand = serialize($hand);
-            $sDeck = serialize($deck);
-            $sPile = serialize($pile);
-
-            $gameUpdate = UnoGame::where('user_id', '=', $fields['user_id'])->where('user_token', '=', $token)->where('status', '=', 'ongoing')
-            ->update(['player0' => $sHand, 'deck' => $sDeck, 'pile' => $sPile, 'turns' => $turns, 'direction' => $direction]);
-
-            if(!$gameUpdate){
-                return response([
-                    'message' => 'There was a problem processing this round'
-                ],500);
+            
+            if(sizeOf($hand) == 0){
+                //count points
+                //restart deck and hands
             }
-
-            $response = $this->npcRound($fields['user_id'], $token);
-
-            if($response == 'bad'){
-                return response([
-                    'message' => 'There was a problem processing this round /b'
-                ],500);
-            }
-
-            $message .= $response;
-
-            //this bit feels so unnecessary but after isolating npcRound I needed the updated info to give to user and it's quite a bit to return from the function--------------
-            $playInfo = DB::table('uno_games as ug')->select('ug.player0 as hand', 'ug.player0points as p0points', 
-            'ug.player1 as npc1hand', 'ug.player1points as p1points',
-            'ug.player2 as npc2hand', 'ug.player2points as p2points',
-            'ug.player3 as npc3hand', 'ug.player3points as p3points', 
-            'ug.deck as deck', 'ug.pile as pile', 'ug.turns as turns')->where('user_id', '=', $fields['user_id'])
-            ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
-
-            $hand = unserialize($playInfo[0]->hand);
-            $deck = unserialize($playInfo[0]->deck);
-            $pile = unserialize($playInfo[0]->pile);
-            $npc1hand = unserialize($playInfo[0]->npc1hand);
-            $npc2hand = unserialize($playInfo[0]->npc2hand);
-            $npc3hand = unserialize($playInfo[0]->npc3hand);
-            $turns = $playInfo[0]->turns;*/
-            //-------------------------------------------------------
-
-            /*$npcHands = [$npc1hand, $npc2hand, $npc3hand];
-
-            if($playInfo[0]->direction == 'clockwise'){
-                $play = 0;
-                while($play < 3 && $play >= 0){
-                    $npcPlay = $this->npcPlay($npcHands[$play], $deck, $pile);
-                    $npcHands[$play] = $npcPlay[0];
-                    $deck = $npcPlay[1];
-                    $pile = $npcPlay[2];
-                    if(end($pile)[1] != 'reverse'){
-                        $play += 1;
-                    }else{
-                        $play -= 1;
-                    }
-                    $turn += 1;
-                    $message .= '. Player '.($play+1).' played '.end($pile)[0].' '.end($pile)[1];
-                }
-            }else{
-                $play = 2;
-                while($play < 3 && $play >= 0){
-                    $npcPlay = $this->npcPlay($npcHands[$play], $deck, $pile);
-                    $npcHands[$play] = $npcPlay[0];
-                    $deck = $npcPlay[1];
-                    $pile = $npcPlay[2];
-                    if(end($pile)[1] != 'reverse'){
-                        $play -= 1;
-                    }else{
-                        $play += 1;
-                    }
-                    $turn += 1;
-                    $message .= '. Player '.($play+1).' played '.end($pile)[0].' '.end($pile)[1];
-                }
-            }*/
 
         }else if(!$canPlayCard && !$hasToDraw){
             return response([
@@ -810,15 +740,23 @@ class UnoController extends Controller
 
     function npcRound($id, $token){
 
-        $playInfo = DB::table('uno_games as ug')->select('ug.player1 as npc1hand', 'ug.player2 as npc2hand', 'ug.player3 as npc3hand',
+        $playInfo = DB::table('uno_games as ug')->select('ug.player0 as hand', 'ug.player0points as userPoints', 
+        'ug.player1 as npc1hand', 'ug.player1points as npc1points', 
+        'ug.player2 as npc2hand', 'ug.player2points as npc2points', 
+        'ug.player3 as npc3hand', 'ug.player3points as npc3points',
         'ug.deck as deck', 'ug.pile as pile', 'ug.direction as direction', 'ug.turns as turns')->where('user_id', '=', $id)
         ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
 
+        $hand = unserialize($playInfo[0]->hand);
+        $playerPoints = $playInfo[0]->userPoints;
         $deck = unserialize($playInfo[0]->deck);
         $pile = unserialize($playInfo[0]->pile);
         $npc1hand = unserialize($playInfo[0]->npc1hand);
+        $npc1points = $playInfo[0]->npc1points;
         $npc2hand = unserialize($playInfo[0]->npc2hand);
+        $npc2points = $playInfo[0]->npc2points;
         $npc3hand = unserialize($playInfo[0]->npc3hand);
+        $npc3points = $playInfo[0]->npc3points;
         $turns = $playInfo[0]->turns;
         $direction = $playInfo[0]->direction;
 
@@ -837,6 +775,7 @@ class UnoController extends Controller
                 $npcHands[$play] = $npcPlay[0];
                 $deck = $npcPlay[1];
                 $pile = $npcPlay[2];
+
                 if($npcPlay[0] > $temp){
                     $message .= '. NPC '.$play.' draw '.sizeOf($npcPlay[0]) - sizeOf($temp);
                 }else if(end($temp2)[1] == 'block'){
@@ -844,6 +783,14 @@ class UnoController extends Controller
                 }else{
                     $message .= '. NPC '.$play.' played '.end($pile)[0].' '.end($pile)[1];
                 }
+
+                if(sizeOf($npcPlay[0]) == 1){
+                    $message .= '. NPC '.$play.' said UNO';
+                }else if(sizeOf($npcPlay[0]) == 0){
+                    //calculate points
+                    //restart deck and hands <<<<<
+                }
+
                 if(end($pile)[1] != 'reverse' && $changeDirection == false){
                     $play += 1;
                 }else{
@@ -861,6 +808,7 @@ class UnoController extends Controller
                 $npcHands[$play] = $npcPlay[0];
                 $deck = $npcPlay[1];
                 $pile = $npcPlay[2];
+
                 if($npcPlay[0] > $temp){
                     $message .= '. NPC '.$play.' draw '.sizeOf($npcPlay[0]) - sizeOf($temp);
                 }else if(end($temp2)[1] == 'block'){
@@ -868,6 +816,14 @@ class UnoController extends Controller
                 }else{
                     $message .= '. NPC '.$play.' played '.end($pile)[0].' '.end($pile)[1];
                 }
+
+                if(sizeOf($npcPlay[0]) == 1){
+                    $message .= '. NPC '.$play.' said UNO';
+                }else if(sizeOf($npcPlay[0]) == 0){
+                    //calculate points
+                    //restart deck and hands
+                }
+
                 if(end($pile)[1] != 'reverse' && $changeDirection == false){
                     $play -= 1;
                 }else{
@@ -1070,5 +1026,87 @@ class UnoController extends Controller
         $deck = shuffle($pile);
 
         return [$deck, [$topPileColor, $topPileAction]];
+    }
+
+    function pointsCalculation(){
+
+        $playInfo = DB::table('uno_games as ug')->select('ug.player0 as hand', 'ug.player0points as p0points', 
+            'ug.player1 as npc1hand', 'ug.player1points as p1points',
+            'ug.player2 as npc2hand', 'ug.player2points as p2points',
+            'ug.player3 as npc3hand', 'ug.player3points as p3points', 
+            'ug.deck as deck', 'ug.pile as pile', 'ug.direction as direction')->where('user_id', '=', $fields['user_id'])
+            ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
+
+        $hand = unserialize($playInfo[0]->hand);
+        $userPoints = $playInfo[0]->p0points;
+        $pile = unserialize($playInfo[0]->pile);
+        $deck = unserialize($playInfo[0]->deck);
+        $npc1hand = unserialize($playInfo[0]->npc1hand);
+        $npc1points = $playInfo[0]->p1points;
+        $npc2hand = unserialize($playInfo[0]->npc2hand);
+        $npc2points = $playInfo[0]->p2points;
+        $npc3hand = unserialize($playInfo[0]->npc3hand);
+        $npc3points = $playInfo[0]->p3points;
+        $direction = $playInfo[0]->direction;
+
+        $hands = [$hand, $npc1hand, $npc2hand, $npc3hand];
+        $points = [$userPoints, $npc1points, $npc2points, $npc3points];
+
+        $k = 999;
+
+        foreach($hands as $key=>$hand){
+            if(sizeOf($hand) == 0){
+                $k = $key;
+            }
+        }
+
+        $iter = 0;
+
+        if(end($pile)[1] === '+2'){
+            $iter = 2;
+        }else if(end($pile)[1] === '+4'){
+            $iter = 4;
+        }
+
+        if($iter != 0){
+
+            if($direction == 'clockwise'){
+                if($k == sizeOf($hands)-1){
+                    $l = 0;
+                }else{
+                    $l = $k+1;
+                }
+            }else{
+                if($k == 0){
+                    $l = 3;
+                }else{
+                    $l = $k-1;
+                }
+            }
+
+            $response = $this->autoDraw($iter, $hand[$l], $deck);
+
+            $hand[$l] = $response[0];
+            $deck = $response[1];
+        }
+
+        $points = 0;
+
+        foreach($hands as $key=>$hand){
+            foreach($hand as $key=>$card){
+                if($card[0] !== 'wild'){
+                    if($card[1] !== '+2' && $card[1] !== 'reverse' && $card[1] !== 'block'){
+                        $points += intval($card[1]);
+                    }else{
+                        $points += 20;
+                    }
+                }else{
+                    $points += 50;
+                }
+            }
+        }
+
+        return $points;
+
     }
 }
