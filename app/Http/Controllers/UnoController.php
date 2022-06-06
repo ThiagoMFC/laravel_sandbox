@@ -595,6 +595,9 @@ class UnoController extends Controller
 
             $hasToDraw = true;
 
+        }else if(end($pile)[1] === 'block'){
+            array_push($pile, [end($pile)[0], '-']);
+            goto skipUser;
         }
 
 
@@ -607,9 +610,16 @@ class UnoController extends Controller
         }else{
 
             $cardKey = 9999;
+            $canPlayWild4 = true;
 
-            //check if user has the card he wants to play
+            //check if user has the card he wants to play and if he can play wild +4
             foreach($hand as $key=>$card){
+
+                //if user has any card that matches pile he cant play wild +4
+                if($card[0] === end($pile)[0] || $card[1] === end($pile)[1]){
+                    $canPlayWild4 = false;
+                }
+
                 if($card[0] === $fields['color'] && $card[1] === $fields['action']){
                     $userHasCard = true;
                     $cardKey = $key;
@@ -622,6 +632,10 @@ class UnoController extends Controller
             if($userHasCard){
                 //check if card matches the last on pile
                 if($hand[$cardKey][0] === end($pile)[0] || $hand[$cardKey][1] === end($pile)[1]){
+                    $canPlayCard = true;
+                }else if($hand[$cardKey][0] === 'wild' && $hand[$cardKey][1] === 'change'){
+                    $canPlayCard = true;
+                }else if($canPlayWild4){
                     $canPlayCard = true;
                 }
             }else{
@@ -672,6 +686,10 @@ class UnoController extends Controller
 
         $turns += 1;
 
+        if(sizeOf($hand) == 0){
+            $this->pointsCalculation($fields['user_id'], $token);
+        }
+
         $sHand = serialize($hand);
         $sDeck = serialize($deck);
         $sPile = serialize($pile);
@@ -684,6 +702,13 @@ class UnoController extends Controller
                 'message' => 'There was a problem processing this round'
             ],500);
         }
+
+        if(sizeOf($hand) == 0){
+            
+            //reset deck and hands---------------------------------------------------------------------------------------------------------------------------------
+        }
+
+        skipUser:
 
         $response = $this->npcRound($fields['user_id'], $token);
 
@@ -787,14 +812,19 @@ class UnoController extends Controller
                 if(sizeOf($npcPlay[0]) == 1){
                     $message .= '. NPC '.$play.' said UNO';
                 }else if(sizeOf($npcPlay[0]) == 0){
-                    //calculate points
+                    $this->pointsCalculation($id, $token);//-----------------------------------------------------------------------------------------
                     //restart deck and hands <<<<<
                 }
 
                 if(end($pile)[1] != 'reverse' && $changeDirection == false){
                     $play += 1;
-                }else{
+                }else if(end($pile)[1] != 'reverse' && $changeDirection == true){
                     $play -= 1;
+                }else if(end($pile)[1] == 'reverse' && $changeDirection == false){
+                    $play -= 1;
+                    $changeDirection = !$changeDirection;
+                }else{
+                    $play += 1;
                     $changeDirection = !$changeDirection;
                 }
                 
@@ -820,14 +850,19 @@ class UnoController extends Controller
                 if(sizeOf($npcPlay[0]) == 1){
                     $message .= '. NPC '.$play.' said UNO';
                 }else if(sizeOf($npcPlay[0]) == 0){
-                    //calculate points
+                    $this->pointsCalculation($id, $token);//-----------------------------------------------------------------------------------------
                     //restart deck and hands
                 }
 
                 if(end($pile)[1] != 'reverse' && $changeDirection == false){
                     $play -= 1;
-                }else{
+                }else if(end($pile)[1] != 'reverse' && $changeDirection == true){
                     $play += 1;
+                }else if(end($pile)[1] == 'reverse' && $changeDirection == false){
+                    $play += 1;
+                    $changeDirection = !$changeDirection;
+                }else{
+                    $play -= 1;
                     $changeDirection = !$changeDirection;
                 }
                 
@@ -1028,13 +1063,13 @@ class UnoController extends Controller
         return [$deck, [$topPileColor, $topPileAction]];
     }
 
-    function pointsCalculation(){
+    function pointsCalculation($id, $token){
 
         $playInfo = DB::table('uno_games as ug')->select('ug.player0 as hand', 'ug.player0points as p0points', 
             'ug.player1 as npc1hand', 'ug.player1points as p1points',
             'ug.player2 as npc2hand', 'ug.player2points as p2points',
             'ug.player3 as npc3hand', 'ug.player3points as p3points', 
-            'ug.deck as deck', 'ug.pile as pile', 'ug.direction as direction')->where('user_id', '=', $fields['user_id'])
+            'ug.deck as deck', 'ug.pile as pile', 'ug.direction as direction')->where('user_id', '=', $id)
             ->where('user_token','=', $token)->where('status','=', 'ongoing')->get();
 
         $hand = unserialize($playInfo[0]->hand);
@@ -1086,27 +1121,30 @@ class UnoController extends Controller
 
             $response = $this->autoDraw($iter, $hand[$l], $deck);
 
-            $hand[$l] = $response[0];
+            $hands[$l] = $response[0];
             $deck = $response[1];
         }
 
-        $points = 0;
 
         foreach($hands as $key=>$hand){
             foreach($hand as $key=>$card){
                 if($card[0] !== 'wild'){
                     if($card[1] !== '+2' && $card[1] !== 'reverse' && $card[1] !== 'block'){
-                        $points += intval($card[1]);
+                        $points[$k] += intval($card[1]);
                     }else{
-                        $points += 20;
+                        $points[$k] += 20;
                     }
                 }else{
-                    $points += 50;
+                    $points[$k] += 50;
                 }
             }
         }
 
-        return $points;
+
+        $gameUpdate = UnoGame::where('user_id', '=', $id)->where('user_token', '=', $token)->where('status', '=', 'ongoing')
+            ->update(['player0points' => $points[0], 'player1points' => $points[1], 'player2points' => $points[2], 'player2points' => $points[3]]);
+
+        return;
 
     }
 }
