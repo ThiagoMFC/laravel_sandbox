@@ -670,11 +670,6 @@ class UnoController extends Controller
             }
 
             unset($hand[$cardKey]);
-            
-            if(sizeOf($hand) == 0){
-                //count points
-                //restart deck and hands
-            }
 
         }else if(!$canPlayCard && !$hasToDraw){
             return response([
@@ -811,9 +806,6 @@ class UnoController extends Controller
 
                 if(sizeOf($npcPlay[0]) == 1){
                     $message .= '. NPC '.$play.' said UNO';
-                }else if(sizeOf($npcPlay[0]) == 0){
-                    $this->pointsCalculation($id, $token);//-----------------------------------------------------------------------------------------
-                    //restart deck and hands <<<<<
                 }
 
                 if(end($pile)[1] != 'reverse' && $changeDirection == false){
@@ -821,10 +813,10 @@ class UnoController extends Controller
                 }else if(end($pile)[1] != 'reverse' && $changeDirection == true){
                     $play -= 1;
                 }else if(end($pile)[1] == 'reverse' && $changeDirection == false){
-                    $play -= 1;
+                    $play += 1;
                     $changeDirection = !$changeDirection;
                 }else{
-                    $play += 1;
+                    $play -= 1;
                     $changeDirection = !$changeDirection;
                 }
                 
@@ -849,9 +841,6 @@ class UnoController extends Controller
 
                 if(sizeOf($npcPlay[0]) == 1){
                     $message .= '. NPC '.$play.' said UNO';
-                }else if(sizeOf($npcPlay[0]) == 0){
-                    $this->pointsCalculation($id, $token);//-----------------------------------------------------------------------------------------
-                    //restart deck and hands
                 }
 
                 if(end($pile)[1] != 'reverse' && $changeDirection == false){
@@ -889,6 +878,12 @@ class UnoController extends Controller
 
         if(!$gameUpdate){
             $message = 'bad';
+        }
+
+        foreach($npcHands as $key=>$h){
+            if(sizeOf($h) == 0){
+                $this->pointsCalculation($id, $token);
+            }
         }
 
         return $message;
@@ -1089,8 +1084,8 @@ class UnoController extends Controller
 
         $k = 999;
 
-        foreach($hands as $key=>$hand){
-            if(sizeOf($hand) == 0){
+        foreach($hands as $key=>$h){
+            if(sizeOf($h) == 0){
                 $k = $key;
             }
         }
