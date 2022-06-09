@@ -681,10 +681,6 @@ class UnoController extends Controller
 
         $turns += 1;
 
-        if(sizeOf($hand) == 0){
-            $this->pointsCalculation($fields['user_id'], $token);
-        }
-
         $sHand = serialize($hand);
         $sDeck = serialize($deck);
         $sPile = serialize($pile);
@@ -699,8 +695,10 @@ class UnoController extends Controller
         }
 
         if(sizeOf($hand) == 0){
-            
-            //reset deck and hands---------------------------------------------------------------------------------------------------------------------------------
+            $response = $this->pointsCalculation($id, $token);
+            if($response != "ok"){
+                $message .= $response;
+            }
         }
 
         skipUser:
@@ -813,10 +811,10 @@ class UnoController extends Controller
                 }else if(end($pile)[1] != 'reverse' && $changeDirection == true){
                     $play -= 1;
                 }else if(end($pile)[1] == 'reverse' && $changeDirection == false){
-                    $play += 1;
+                    $play -= 1;
                     $changeDirection = !$changeDirection;
                 }else{
-                    $play -= 1;
+                    $play += 1;
                     $changeDirection = !$changeDirection;
                 }
                 
@@ -882,7 +880,10 @@ class UnoController extends Controller
 
         foreach($npcHands as $key=>$h){
             if(sizeOf($h) == 0){
-                $this->pointsCalculation($id, $token);
+                $response = $this->pointsCalculation($id, $token);
+                if($response != "ok"){
+                    return $response;
+                }
             }
         }
 
@@ -1043,9 +1044,18 @@ class UnoController extends Controller
         $topPileColor = end($pile)[0];
         $topPileAction = end($pile)[1];
 
+        if(sizeOf($deck) != 0){
+            foreach($deck as $k=>$card){
+                array_push($pile, $deck[$k]);
+                unset($deck[$k]);
+            }
+        }
+
         //remove '-' from $pile
         foreach($pile as $key=>$card){
             if($card[1] == '-'){
+                unset($pile[$key]);
+            }else if($card[1] === "+4" && $card[0] !== "wild"){
                 unset($pile[$key]);
             }
         }
@@ -1088,6 +1098,10 @@ class UnoController extends Controller
             if(sizeOf($h) == 0){
                 $k = $key;
             }
+        }
+
+        if($k == 999){
+            return "bad";
         }
 
         $iter = 0;
@@ -1135,11 +1149,54 @@ class UnoController extends Controller
             }
         }
 
+        $reset = $this->resetGameAfterPointsCalc($hands, $deck, $pile);
+        $sHand = serialize($reset[0][0]);
+        $sNpc1hand = serialize($reset[0][1]);
+        $sNpc2hand = serialize($reset[0][2]);
+        $sNpc3hand = serialize($reset[0][3]);
+        $sDeck = serialize($reset[1]);
+        $sPile = serialize($reset[2]);
+
 
         $gameUpdate = UnoGame::where('user_id', '=', $id)->where('user_token', '=', $token)->where('status', '=', 'ongoing')
-            ->update(['player0points' => $points[0], 'player1points' => $points[1], 'player2points' => $points[2], 'player2points' => $points[3]]);
+            ->update(['player0' => $sHand, 'player0points' => $points[0],'player1' => $sNpc1hand, 'player1points' => $points[1],
+            'player2' => $sNpc2hand, 'player2points' => $points[2], 'player3' => $sNpc3hand, 'player3points' => $points[3], 'deck' => $sdeck, 'pile' => $sPile]);
 
-        return;
+
+
+        return "ok";
+
+    }
+
+    function resetGameAfterPointsCalc($hands, $deck, $pile){
+
+        //dump all cards on hand to pile
+        foreach($hands as $hand){
+            foreach($hand as $k=>$card){
+                array_push($pile, $card);
+                unset($hand[$k]);
+            }
+        }
+
+        $reset = $this->resetDeck($deck, $pile);
+        $deck = $reset[0];
+        $pile = $reset[1];
+
+        shuffle($deck);
+
+        //redistribute cards
+        for($i = 0; $i < 28; $i+=4){
+            array_push($hands[0], $deck[$i]);
+            unset($deck[$i]);
+            array_push($hands[1], $deck[$i+1]);
+            unset($deck[$i+1]);
+            array_push($hands[3], $deck[$i+2]);
+            unset($deck[$i+2]);
+            array_push($hands[4], $deck[$i+3]);
+            unset($deck[$i+3]);
+        }
+
+        return [$hands, $deck, $pile];
 
     }
 }
