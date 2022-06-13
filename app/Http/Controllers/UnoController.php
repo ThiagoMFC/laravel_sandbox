@@ -976,14 +976,16 @@ class UnoController extends Controller
             $pile = array_values($pile);
             $hand = array_values($hand);
 
-            $wild4Key = array_search('+4', array_column($hand, 1));
+            $c = array_column($hand, 1);
+            $wild4Key = array_search('+4', $c, true);
+
+            //$wild4Key = array_search('+4', array_column($hand, 1), true);
 
             //error_log($wild4Key);//---------------------------------
             //error_log($hand[$wild4Key][0]);//-------------------------
 
-            if($wild4Key != ''){
+            if($wild4Key != false){
                 //if wild +4 available on hand, play it
-
                 array_push($pile, $hand[$wild4Key]);
                 unset($hand[$wild4Key]);
 
@@ -1041,8 +1043,6 @@ class UnoController extends Controller
 
     function resetDeck($deck, $pile){
 
-        $topPileColor = end($pile)[0];
-        $topPileAction = end($pile)[1];
 
         if(sizeOf($deck) != 0){
             foreach($deck as $k=>$card){
@@ -1053,12 +1053,15 @@ class UnoController extends Controller
 
         //remove '-' from $pile
         foreach($pile as $key=>$card){
-            if($card[1] == '-'){
+            if($card[1] === '-'){
                 unset($pile[$key]);
             }else if($card[1] === "+4" && $card[0] !== "wild"){
                 unset($pile[$key]);
             }
         }
+
+        $topPileColor = end($pile)[0];
+        $topPileAction = end($pile)[1];
 
         //remove last from $pile before resetting it as $deck
         unset($pile[array_key_last($pile)]);
