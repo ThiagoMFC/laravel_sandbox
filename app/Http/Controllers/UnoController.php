@@ -261,8 +261,8 @@ class UnoController extends Controller
             'player 3 points' => 0,
             'player 4 hand' => count($npc3hand),
             'player 4 points' => 0,
-            'turns' => $turns
-            //'deck' => $cards
+            'turns' => $turns,
+            'deck' => count($cards)
         ], 201);
 
 
@@ -637,6 +637,8 @@ class UnoController extends Controller
                     $canPlayCard = true;
                 }else if($canPlayWild4){
                     $canPlayCard = true;
+                }else if($hand[$cardKey][1] === $pile[array_key_last($pile)-1][1] && end($pile)[1] === '-'){
+                    $canPlayCard = true;
                 }
             }else{
                 return response([
@@ -656,6 +658,7 @@ class UnoController extends Controller
             $message .= 'You played '.$hand[$cardKey][0].' '.$hand[$cardKey][1];
 
             if($hand[$cardKey][1] == 'reverse'){
+                array_push($pile, [end($pile)[0], '-']);
                 if($direction == 'clockwise'){
                     $direction = 'counterClockwise';
                 }else{
@@ -679,6 +682,8 @@ class UnoController extends Controller
             ],400);
         }
 
+        skipUser:
+
         $turns += 1;
 
         $sHand = serialize($hand);
@@ -695,13 +700,13 @@ class UnoController extends Controller
         }
 
         if(sizeOf($hand) == 0){
-            $response = $this->pointsCalculation($id, $token);
+            $response = $this->pointsCalculation($fields['user_id'], $token);
             if($response != "ok"){
                 $message .= $response;
             }
         }
 
-        skipUser:
+        //skipUser:
 
         $response = $this->npcRound($fields['user_id'], $token);
 
@@ -750,7 +755,8 @@ class UnoController extends Controller
             'player 3 points' => $playInfo[0]->p2points,
             'player 4 hand' => count($npc3hand),
             'player 4 points' => $playInfo[0]->p3points,
-            'turns' => $turns
+            'turns' => $turns,
+            'deck' => count($deck)
         ], 201);
 
 
@@ -811,9 +817,11 @@ class UnoController extends Controller
                 }else if(end($pile)[1] != 'reverse' && $changeDirection == true){
                     $play -= 1;
                 }else if(end($pile)[1] == 'reverse' && $changeDirection == false){
+                    array_push($pile, [end($pile)[0], '-']);
                     $play -= 1;
                     $changeDirection = !$changeDirection;
                 }else{
+                    array_push($pile, [end($pile)[0], '-']);
                     $play += 1;
                     $changeDirection = !$changeDirection;
                 }
@@ -846,9 +854,11 @@ class UnoController extends Controller
                 }else if(end($pile)[1] != 'reverse' && $changeDirection == true){
                     $play += 1;
                 }else if(end($pile)[1] == 'reverse' && $changeDirection == false){
+                    array_push($pile, [end($pile)[0], '-']);
                     $play += 1;
                     $changeDirection = !$changeDirection;
                 }else{
+                    array_push($pile, [end($pile)[0], '-']);
                     $play -= 1;
                     $changeDirection = !$changeDirection;
                 }
@@ -964,6 +974,11 @@ class UnoController extends Controller
                 array_push($pile, [$color, '-']);
 
                 break;
+            }else if($card[1] === $pile[array_key_last($pile)-1][1] && end($pile)[1] === '-'){
+                array_push($pile, $card);
+                unset($hand[$key]);
+                $playableCard = true;
+                break;
             }
         }
 
@@ -1043,7 +1058,7 @@ class UnoController extends Controller
 
     function resetDeck($deck, $pile){
 
-
+        //dump leftover cards from deck to pile
         if(sizeOf($deck) != 0){
             foreach($deck as $k=>$card){
                 array_push($pile, $deck[$k]);
@@ -1051,7 +1066,7 @@ class UnoController extends Controller
             }
         }
 
-        //remove '-' from $pile
+        //remove flags '-' from $pile
         foreach($pile as $key=>$card){
             if($card[1] === '-'){
                 unset($pile[$key]);
@@ -1066,7 +1081,9 @@ class UnoController extends Controller
         //remove last from $pile before resetting it as $deck
         unset($pile[array_key_last($pile)]);
 
-        $deck = shuffle($pile);
+        shuffle($pile);
+
+        $deck = $pile;
 
         return [$deck, [$topPileColor, $topPileAction]];
     }
@@ -1163,7 +1180,7 @@ class UnoController extends Controller
 
         $gameUpdate = UnoGame::where('user_id', '=', $id)->where('user_token', '=', $token)->where('status', '=', 'ongoing')
             ->update(['player0' => $sHand, 'player0points' => $points[0],'player1' => $sNpc1hand, 'player1points' => $points[1],
-            'player2' => $sNpc2hand, 'player2points' => $points[2], 'player3' => $sNpc3hand, 'player3points' => $points[3], 'deck' => $sdeck, 'pile' => $sPile]);
+            'player2' => $sNpc2hand, 'player2points' => $points[2], 'player3' => $sNpc3hand, 'player3points' => $points[3], 'deck' => $sDeck, 'pile' => $sPile]);
 
 
 
@@ -1193,9 +1210,9 @@ class UnoController extends Controller
             unset($deck[$i]);
             array_push($hands[1], $deck[$i+1]);
             unset($deck[$i+1]);
-            array_push($hands[3], $deck[$i+2]);
+            array_push($hands[2], $deck[$i+2]);
             unset($deck[$i+2]);
-            array_push($hands[4], $deck[$i+3]);
+            array_push($hands[3], $deck[$i+3]);
             unset($deck[$i+3]);
         }
 
