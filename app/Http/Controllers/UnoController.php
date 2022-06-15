@@ -265,111 +265,6 @@ class UnoController extends Controller
             'deck' => count($cards)
         ], 201);
 
-
-        /*
-        '-' will be pushed to discard pile($cardOnTable) as action whenever a player 
-        is skipped (either because of +2, +4 or block) and/or color is changed.
-        below possible expected sequence of play
-        first card on table | player 4 plays | player 4 choses color | player 3 is skipped | player 2 plays
-        [['red', 'reverse'],  ['wild', '+4'],     ['green', '+4'],       ['green', '-'],     ['green', '2']];
-        */
-
-        //$cardOnTable = [['red', 'reverse']];
-
-        /*$npcHands = [$player1hand, $player2hand, $player3hand];
-
-        if($cardOnTable[0][1] == 'reverse'){
-            //plays 4 to 0
-            $direction = 'counterClockwise';
-            
-            //starts round by npc 3 (player 4)
-            $play = 2;
-            //reverse card loop. let npcPlay while theyre using reverse cards among themselves.
-            while($play < 3 && $play >= 0){
-                $npcPlay = $this->npcPlay($npcHands[$play], $cards, $cardOnTable);
-                $npcHands[$play] = $npcPlay[0];
-                $cards = $npcPlay[1];
-                $cardOnTable = $npcPlay[2];
-                if(end($cardOnTable)[1] != 'reverse'){
-                    $play -= 1;
-                }else{
-                    $play += 1;
-                }
-            }
-        }else{
-            //plays 0 to 4
-            $direction = 'clockwise';
-            if($cardOnTable[0][1] == 'block'){
-                //skip player 0 (user) and let npcPlay
-                array_push($cardOnTable, [$cardOnTable[0][0], '-']);
-                //starts round by npc player 1
-                $play = 0;
-                while($play < 3 && $play >= 0){
-                    $npcPlay = $this->npcPlay($npcHands[$play], $cards, $cardOnTable);
-                    $npcHands[$play] = $npcPlay[0];
-                    $cards = $npcPlay[1];
-                    $cardOnTable = $npcPlay[2];
-                    if(end($cardOnTable)[1] != 'reverse'){
-                        $play += 1;
-                    }else{
-                        $play -= 1;
-                    }
-                }
-            }
-        }
-
-        $p0h = serialize($player0hand);
-        $p1h = serialize($npcHands[0]);
-        $p2h = serialize($npcHands[1]);
-        $p3h = serialize($npcHands[2]);
-        $pile = serialize($cardOnTable);
-        $deck = serialize($cards);
-
-        $now = Carbon::now();
-
-        $game = UnoGame::create([
-            'user_id' => $fields['user_id'],
-            'user_token' => $token,
-            'status' => 'ongoing',
-            'result' => 'none',
-            'player0' => $p0h,
-            'player0points' => 0,
-            'player1' => $p1h,
-            'player1points' => 0,
-            'player2' => $p2h,
-            'player2points' => 0,
-            'player3' => $p3h, 
-            'player3points' => 0,
-            'deck' => $deck, 
-            'pile' => $pile,
-            'turns' => 0,
-            'direction' => $direction,
-            'date_started' => $now
-        ]);
-
-        if($game){
-            return response([
-                'message' => 'game started and is running '. $direction,
-                'on table' => $cardOnTable,
-                'your cards' => $player0hand,
-                'your points' => 0,
-                'player 2 hand' => count($npcHands[0]),
-                //'player 2 hand' => $npcHands[0],
-                'player 2 points' => 0,
-                'player 3 hand' => count($npcHands[1]),
-                //'player 3 hand' => $npcHands[1],
-                'player 3 points' => 0,
-                'player 4 hand' => count($npcHands[2]),
-                //'player 4 hand' => $npcHands[2],
-                'player 4 points' => 0,
-                //'deck' => $cards
-            ], 201);
-        }else{
-            return response([
-                'message' => 'failed to start game',
-            ], 500);
-        }*/
-
     }
 
     public function endGame(Request $request){
@@ -1085,7 +980,7 @@ class UnoController extends Controller
 
         $deck = $pile;
 
-        return [$deck, [$topPileColor, $topPileAction]];
+        return [$deck, [[$topPileColor, $topPileAction]]];
     }
 
     function pointsCalculation($id, $token){
