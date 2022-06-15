@@ -1086,10 +1086,10 @@ class UnoController extends Controller
     function resetGameAfterPointsCalc($hands, $deck, $pile){
 
         //dump all cards on hand to pile
-        foreach($hands as $hand){
+        foreach($hands as $l=>$hand){
             foreach($hand as $k=>$card){
                 array_push($pile, $card);
-                unset($hand[$k]);
+                unset($hands[$l][$k]);
             }
         }
 
